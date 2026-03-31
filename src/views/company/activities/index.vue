@@ -44,45 +44,64 @@
     }
   }
 
-  const { columns, data, loading, pagination, getData, handleSizeChange, handleCurrentChange } =
-    useTable({
-      core: {
-        apiFn: getActivities as any,
-        apiParams: computed(() => ({
-          type: activeTab.value,
-          page: pagination.page,
-          page_size: pagination.pageSize
-        })),
-        columnsFactory: () => [
-          { type: 'index', width: 60, label: '序号' },
-          { prop: 'title', label: '活动标题', minWidth: 150 },
-          { prop: 'location', label: '地点', minWidth: 120 },
-          { prop: 'activity_date', label: '活动日期', minWidth: 120 },
-          { prop: 'start_time', label: '开始时间', minWidth: 100 },
-          { prop: 'expected_num', label: '预计人数', minWidth: 100 },
-          {
-            prop: 'status',
-            label: '状态',
-            minWidth: 100,
-            formatter: (row: Activity) => {
-              const map: Record<number, string> = { 0: '已取消', 1: '进行中', 2: '已结束' }
-              return map[row.status] ?? String(row.status)
-            }
-          },
-          {
-            label: '操作',
-            width: 150,
-            formatter: () => [
-              { label: '编辑', key: 'edit', type: 'primary' },
-              { label: '删除', key: 'delete', type: 'danger' }
-            ]
+  const pageParams = ref({ current: 1, size: 10 })
+
+  const paginationModel = computed({
+    get: () => pageParams.value,
+    set: (val: { current: number; size: number }) => {
+      pageParams.value = val
+    }
+  })
+
+  const { columns, data, loading, pagination, getData } = useTable({
+    core: {
+      apiFn: getActivities as any,
+      apiParams: computed(() => ({
+        type: activeTab.value,
+        page: pageParams.value.current,
+        page_size: pageParams.value.size
+      })),
+      columnsFactory: () => [
+        { type: 'index', width: 60, label: '序号' },
+        { prop: 'title', label: '活动标题', minWidth: 150 },
+        { prop: 'location', label: '地点', minWidth: 120 },
+        { prop: 'activity_date', label: '活动日期', minWidth: 120 },
+        { prop: 'start_time', label: '开始时间', minWidth: 100 },
+        { prop: 'expected_num', label: '预计人数', minWidth: 100 },
+        {
+          prop: 'status',
+          label: '状态',
+          minWidth: 100,
+          formatter: (row: Activity) => {
+            const map: Record<number, string> = { 0: '已取消', 1: '进行中', 2: '已结束' }
+            return map[row.status] ?? String(row.status)
           }
-        ]
-      }
-    })
+        },
+        {
+          label: '操作',
+          width: 150,
+          formatter: () => [
+            { label: '编辑', key: 'edit', type: 'primary' },
+            { label: '删除', key: 'delete', type: 'danger' }
+          ]
+        }
+      ]
+    }
+  })
+
+  const handleSizeChange = (size: number) => {
+    pageParams.value.size = size
+    pageParams.value.current = 1
+    getData()
+  }
+
+  const handleCurrentChange = (current: number) => {
+    pageParams.value.current = current
+    getData()
+  }
 
   const handleTabChange = () => {
-    pagination.page = 1
+    pageParams.value.current = 1
     resetForm()
     getData()
   }
@@ -162,8 +181,8 @@
     </ElTable>
 
     <ElPagination
-      v-model:current-page="pagination.page"
-      v-model:page-size="pagination.pageSize"
+      v-model:current-page="pageParams.current"
+      v-model:page-size="pageParams.size"
       :total="pagination.total"
       :page-sizes="[10, 20, 50]"
       layout="total, sizes, prev, pager, next"

@@ -43,12 +43,12 @@ export class MenuProcessor {
     const userStore = useUserStore()
     const roles = userStore.info?.roles
 
-    let menuList = [...asyncRoutes]
-
-    // 根据角色过滤菜单
-    if (roles && roles.length > 0) {
-      menuList = this.filterMenuByRoles(menuList, roles)
+    // 角色为空时返回空菜单（安全默认值）
+    if (!roles || roles.length === 0) {
+      return this.filterEmptyMenus([])
     }
+
+    let menuList = this.filterMenuByRoles([...asyncRoutes], roles)
 
     return this.filterEmptyMenus(menuList)
   }

@@ -30,9 +30,13 @@ export default ({ mode }: { mode: string }) => {
         '/api': {
           target: VITE_API_PROXY_URL,
           changeOrigin: true
+        },
+        '/v1': {
+          target: VITE_API_PROXY_URL,
+          changeOrigin: true
         }
       },
-      host: true
+      host: '0.0.0.0'
     },
     // 路径别名
     resolve: {

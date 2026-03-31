@@ -310,7 +310,7 @@
   const loadEnterpriseStats = async () => {
     try {
       const data = await getEnterpriseStats()
-      statsEnterprise.value = data as Record<string, number>
+      statsEnterprise.value = data as unknown as Record<string, number>
     } catch (e) {
       console.error('Failed to load enterprise stats:', e)
     }

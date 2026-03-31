@@ -33,18 +33,19 @@ export interface AnnouncementQuery {
 }
 
 export const getAnnouncements = (params?: AnnouncementQuery) =>
-  http.get<{ list: Announcement[]; total: number; page: number; page_size: number }>(
-    { url: '/company/announcements', params }
-  )
+  http.get<{ list: Announcement[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/company/announcements',
+    params
+  })
 
 export const getAnnouncement = (id: string) =>
-  http.get<Announcement>({ url: `/company/announcements/${id}` })
+  http.get<Announcement>({ url: `/api/v1/company/announcements/${id}` })
 
 export const createAnnouncement = (data: AnnouncementCreate) =>
-  http.post<Announcement>({ url: '/company/announcements', data })
+  http.post<Announcement>({ url: '/api/v1/company/announcements', data })
 
 export const updateAnnouncement = (id: string, data: Partial<AnnouncementCreate>) =>
-  http.put<Announcement>({ url: `/company/announcements/${id}`, data })
+  http.put<Announcement>({ url: `/api/v1/company/announcements/${id}`, data })
 
 export const deleteAnnouncement = (id: string) =>
-  http.delete({ url: `/company/announcements/${id}` })
+  http.del({ url: `/api/v1/company/announcements/${id}` })

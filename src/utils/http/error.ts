@@ -28,9 +28,13 @@ import { $t } from '@/locales'
 // 错误响应接口
 export interface ErrorResponse {
   /** 错误状态码 */
-  code: number
+  code?: number
   /** 错误消息 */
-  msg: string
+  message?: string
+  /** 错误消息 (FastAPI兼容) */
+  msg?: string
+  /** FastAPI HTTPException detail字段 */
+  detail?: string
   /** 错误附加数据 */
   data?: unknown
 }
@@ -126,7 +130,7 @@ export function handleError(error: AxiosError<ErrorResponse>): never {
   }
 
   const statusCode = error.response?.status
-  const errorMessage = error.response?.data?.msg || error.message
+  const errorMessage = error.response?.data?.message || error.response?.data?.msg || error.response?.data?.detail || error.message
   const requestConfig = error.config
 
   // 处理网络错误
@@ -138,9 +142,12 @@ export function handleError(error: AxiosError<ErrorResponse>): never {
   }
 
   // 处理 HTTP 状态码错误
-  const message = statusCode
-    ? getErrorMessage(statusCode)
-    : errorMessage || $t('httpMsg.requestFailed')
+  // 优先使用后端返回的错误消息，其次使用状态码对应的通用消息
+  const message = errorMessage && errorMessage !== $t('httpMsg.requestFailed')
+    ? errorMessage
+    : statusCode
+      ? getErrorMessage(statusCode)
+      : $t('httpMsg.requestFailed')
   throw new HttpError(message, statusCode || ApiStatus.error, {
     data: error.response.data,
     url: requestConfig?.url,

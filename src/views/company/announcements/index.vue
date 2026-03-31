@@ -49,46 +49,58 @@
     }
   }
 
-  const { columns, data, loading, pagination, getData, handleSizeChange, handleCurrentChange } =
-    useTable({
-      core: {
-        apiFn: getAnnouncements as any,
-        apiParams: computed(() => ({
-          page: pagination.page,
-          page_size: pagination.pageSize
-        })),
-        columnsFactory: () => [
-          { type: 'index', width: 60, label: '序号' },
-          { prop: 'title', label: '公告标题', minWidth: 180 },
-          { prop: 'target_major', label: '目标专业', minWidth: 120 },
-          {
-            prop: 'headcount',
-            label: '招聘人数',
-            minWidth: 100,
-            formatter: (row: Announcement) => row.headcount ?? '-'
-          },
-          { prop: 'deadline', label: '截止日期', minWidth: 120 },
-          {
-            prop: 'status',
-            label: '状态',
-            minWidth: 100,
-            formatter: (row: Announcement) => {
-              const map: Record<number, string> = { 0: '草稿', 1: '发布中', 2: '已过期' }
-              return map[row.status] ?? String(row.status)
-            }
-          },
-          { prop: 'published_at', label: '发布时间', minWidth: 160 },
-          {
-            label: '操作',
-            width: 150,
-            formatter: () => [
-              { label: '编辑', key: 'edit', type: 'primary' },
-              { label: '删除', key: 'delete', type: 'danger' }
-            ]
+  const pageParams = ref({ current: 1, size: 10 })
+
+  const { columns, data, loading, pagination, getData } = useTable({
+    core: {
+      apiFn: getAnnouncements as any,
+      apiParams: computed(() => ({
+        page: pageParams.value.current,
+        page_size: pageParams.value.size
+      })),
+      columnsFactory: () => [
+        { type: 'index', width: 60, label: '序号' },
+        { prop: 'title', label: '公告标题', minWidth: 180 },
+        { prop: 'target_major', label: '目标专业', minWidth: 120 },
+        {
+          prop: 'headcount',
+          label: '招聘人数',
+          minWidth: 100,
+          formatter: (row: Announcement) => row.headcount ?? '-'
+        },
+        { prop: 'deadline', label: '截止日期', minWidth: 120 },
+        {
+          prop: 'status',
+          label: '状态',
+          minWidth: 100,
+          formatter: (row: Announcement) => {
+            const map: Record<number, string> = { 0: '草稿', 1: '发布中', 2: '已过期' }
+            return map[row.status] ?? String(row.status)
           }
-        ]
-      }
-    })
+        },
+        { prop: 'published_at', label: '发布时间', minWidth: 160 },
+        {
+          label: '操作',
+          width: 150,
+          formatter: () => [
+            { label: '编辑', key: 'edit', type: 'primary' },
+            { label: '删除', key: 'delete', type: 'danger' }
+          ]
+        }
+      ]
+    }
+  })
+
+  const handleSizeChange = (size: number) => {
+    pageParams.value.size = size
+    pageParams.value.current = 1
+    getData()
+  }
+
+  const handleCurrentChange = (current: number) => {
+    pageParams.value.current = current
+    getData()
+  }
 
   const handleCommand = async ({ key, row }: { key: string; row: Announcement }) => {
     if (key === 'edit') {
@@ -159,8 +171,8 @@
     </ElTable>
 
     <ElPagination
-      v-model:current-page="pagination.page"
-      v-model:page-size="pagination.pageSize"
+      v-model:current-page="pageParams.current"
+      v-model:page-size="pageParams.size"
       :total="pagination.total"
       :page-sizes="[10, 20, 50]"
       layout="total, sizes, prev, pager, next"

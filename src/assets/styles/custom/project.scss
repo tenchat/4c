@@ -1,0 +1,88 @@
+// 数据大屏独立暗色主题
+.page-databoard,
+.databoard-admin,
+.databoard-school {
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+// 数据大屏卡片样式
+.databoard-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+
+  &:hover {
+    border-color: #58a6ff;
+  }
+}
+
+// 数据大屏标题样式
+.databoard-title {
+  color: #e6edf3;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+// 数据大屏统计卡片
+.databoard-stats {
+  .stat-value {
+    color: #58a6ff;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .stat-label {
+    color: #8b949e;
+    font-size: 14px;
+  }
+}
+
+// 新闻滚动列表
+.news-scroll {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  transition: background 0.3s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.news-time {
+  flex-shrink: 0;
+  color: #8b949e;
+  font-size: 12px;
+}
+
+.news-content {
+  color: #e6edf3;
+  font-size: 14px;
+  line-height: 1.5;
+}

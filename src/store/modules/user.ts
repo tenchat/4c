@@ -42,6 +42,25 @@ import { setPageTitle } from '@/utils/router'
 import { resetRouterState } from '@/router/guards/beforeEach'
 import { useMenuStore } from './menu'
 import { StorageConfig } from '@/utils/storage/storage-config'
+import { fetchLogin, fetchMe } from '@/api/auth'
+
+/** 角色枚举 */
+export const RoleEnum = {
+  STUDENT: 'student',
+  SCHOOL: 'school_admin',
+  ADMIN: 'system_admin',
+  COMPANY: 'company_admin'
+} as const
+
+export type RoleType = (typeof RoleEnum)[keyof typeof RoleEnum]
+
+/** 角色跳转映射 */
+const roleRedirectMap: Record<RoleType, string> = {
+  [RoleEnum.STUDENT]: '/student/dashboard',
+  [RoleEnum.SCHOOL]: '/school/dashboard',
+  [RoleEnum.ADMIN]: '/admin/dashboard',
+  [RoleEnum.COMPANY]: '/company/dashboard'
+}
 
 /**
  * 用户状态管理
@@ -136,6 +155,43 @@ export const useUserStore = defineStore(
     }
 
     /**
+     * 用户登录
+     * @param username 用户名
+     * @param password 密码
+     * @param role 角色
+     */
+    const login = async (username: string, password: string, role: RoleType) => {
+      try {
+        const res = await fetchLogin({ username, password, role })
+        const { token, user } = res.data || {}
+        if (token) {
+          setToken(token)
+          setUserInfo(user)
+          setLoginStatus(true)
+          checkAndClearWorktabs()
+          // 根据角色跳转对应dashboard
+          const redirectPath = roleRedirectMap[role] || '/'
+          router.push(redirectPath)
+        }
+      } catch (error) {
+        throw error
+      }
+    }
+
+    /**
+     * 获取当前用户信息
+     */
+    const getCurrentUser = async () => {
+      try {
+        const res = await fetchMe()
+        setUserInfo(res.data)
+        return res.data
+      } catch {
+        return null
+      }
+    }
+
+    /**
      * 退出登录
      * 清空所有用户相关状态并跳转到登录页
      * 如果是同一账号重新登录，保留工作台标签页
@@ -222,8 +278,11 @@ export const useUserStore = defineStore(
       setLockStatus,
       setLockPassword,
       setToken,
+      login,
+      getCurrentUser,
       logOut,
-      checkAndClearWorktabs
+      checkAndClearWorktabs,
+      RoleEnum
     }
   },
   {

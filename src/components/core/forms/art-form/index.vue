@@ -74,7 +74,7 @@
             class="mb-3 flex-c flex-wrap justify-end md:flex-row md:items-stretch md:gap-2"
             :style="actionButtonsStyle"
           >
-            <div class="flex gap-2 md:justify-center">
+            <div>
               <ElButton v-if="showReset" class="reset-button" @click="handleReset" v-ripple>
                 {{ t('table.form.reset') }}
               </ElButton>

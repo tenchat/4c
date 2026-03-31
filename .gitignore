@@ -5,6 +5,31 @@ dist-ssr
 *.local
 .cursorrules
 
+# Environment files (contain secrets)
+.env
+.env.production
+.env.development
+.env.local
+.env.*.local
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+start.bat
+
+# IDE
+.vscode/
+.idea/
+**/.idea/
+*.swp
+*.swo
+*~
+
+# pnpm
+node_modules/.pnpm/
+
 # Auto-generated files
 src/types/import/auto-imports.d.ts
 src/types/import/components.d.ts

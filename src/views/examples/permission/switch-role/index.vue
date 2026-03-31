@@ -112,6 +112,7 @@
       label: t('login.roles.super'),
       userName: 'Super',
       password: '123456',
+      role: 'system_admin' as const,
       roles: ['R_SUPER'],
       color: '#E6A23C',
       description: '拥有系统最高权限，可以访问所有功能模块'
@@ -121,6 +122,7 @@
       label: t('login.roles.admin'),
       userName: 'Admin',
       password: '123456',
+      role: 'school_admin' as const,
       roles: ['R_ADMIN'],
       color: '#409EFF',
       description: '拥有管理权限，可以管理用户和部分系统设置'
@@ -130,6 +132,7 @@
       label: t('login.roles.user'),
       userName: 'User',
       password: '123456',
+      role: 'student' as const,
       roles: ['R_USER'],
       color: '#67C23A',
       description: '普通用户权限，只能访问基础功能模块'
@@ -164,7 +167,7 @@
   interface AccountInfo {
     userName: string
     password: string
-    role?: string
+    role: 'student' | 'school_admin' | 'company_admin' | 'system_admin'
     roles?: string[]
     [key: string]: any
   }
@@ -179,8 +182,9 @@
 
       // 模拟登录请求
       const { token, refreshToken } = await fetchLogin({
-        userName: account.userName,
-        password: account.password
+        username: account.userName,
+        password: account.password,
+        role: account.role
       })
 
       // 验证token

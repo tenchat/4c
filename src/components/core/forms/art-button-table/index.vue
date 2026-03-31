@@ -2,7 +2,8 @@
 <template>
   <div
     :class="[
-      'inline-flex items-center justify-center min-w-8 h-8 px-2.5 mr-2.5 text-sm c-p rounded-md align-middle',
+      'inline-flex items-center justify-center min-w-8 h-8 px-2.5 mr-2.5 text-sm rounded-md align-middle',
+      props.disabled ? 'c-not-allowed opacity-50' : 'c-p',
       buttonClass
     ]"
     :style="{ backgroundColor: buttonBgColor, color: iconColor }"
@@ -26,9 +27,15 @@
     iconColor?: string
     /** 按钮背景色 */
     buttonBgColor?: string
+    /** 点击回调 */
+    onClick?: () => void
+    /** 是否禁用 */
+    disabled?: boolean
   }
 
-  const props = withDefaults(defineProps<Props>(), {})
+  const props = withDefaults(defineProps<Props>(), {
+    disabled: false
+  })
 
   const emit = defineEmits<{
     (e: 'click'): void
@@ -54,6 +61,7 @@
   })
 
   const handleClick = () => {
-    emit('click')
+    if (props.disabled) return
+    props.onClick ? props.onClick() : emit('click')
   }
 </script>

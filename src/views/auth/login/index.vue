@@ -1,4 +1,3 @@
-<!-- 登录页面 -->
 <template>
   <div class="flex w-full h-screen">
     <LoginLeftView />
@@ -8,8 +7,8 @@
 
       <div class="auth-right-wrap">
         <div class="form">
-          <h3 class="title">{{ $t('login.title') }}</h3>
-          <p class="sub-title">{{ $t('login.subTitle') }}</p>
+          <h3 class="title">大学生就业信息智能分析平台</h3>
+          <p class="sub-title">登录您的账号</p>
           <ElForm
             ref="formRef"
             :model="formData"
@@ -18,29 +17,29 @@
             @keyup.enter="handleSubmit"
             style="margin-top: 25px"
           >
-            <ElFormItem prop="account">
-              <ElSelect v-model="formData.account" @change="setupAccount">
+            <ElFormItem prop="role">
+              <ElSelect v-model="formData.role" @change="setupAccount" placeholder="选择角色" class="w-full">
                 <ElOption
-                  v-for="account in accounts"
-                  :key="account.key"
-                  :label="account.label"
-                  :value="account.key"
+                  v-for="item in roleOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
                 >
-                  <span>{{ account.label }}</span>
+                  <span>{{ item.label }}</span>
                 </ElOption>
               </ElSelect>
             </ElFormItem>
             <ElFormItem prop="username">
               <ElInput
                 class="custom-height"
-                :placeholder="$t('login.placeholder.username')"
+                placeholder="请输入用户名"
                 v-model.trim="formData.username"
               />
             </ElFormItem>
             <ElFormItem prop="password">
               <ElInput
                 class="custom-height"
-                :placeholder="$t('login.placeholder.password')"
+                placeholder="请输入密码"
                 v-model.trim="formData.password"
                 type="password"
                 autocomplete="off"
@@ -57,9 +56,9 @@
                 <ArtDragVerify
                   ref="dragVerify"
                   v-model:value="isPassing"
-                  :text="$t('login.sliderText')"
+                  text="请拖动滑块验证"
                   textColor="var(--art-gray-700)"
-                  :successText="$t('login.sliderSuccessText')"
+                  successText="验证成功"
                   progressBarBg="var(--main-color)"
                   :background="isDark ? '#26272F' : '#F1F1F4'"
                   handlerBg="var(--default-box-color)"
@@ -69,17 +68,12 @@
                 class="absolute top-0 z-[1] px-px mt-2 text-xs text-[#f56c6c] tad-300"
                 :class="{ 'translate-y-10': !isPassing && isClickPass }"
               >
-                {{ $t('login.placeholder.slider') }}
+                请完成滑块验证
               </p>
             </div>
 
             <div class="flex-cb mt-2 text-sm">
-              <ElCheckbox v-model="formData.rememberPassword">{{
-                $t('login.rememberPwd')
-              }}</ElCheckbox>
-              <RouterLink class="text-theme" :to="{ name: 'ForgetPassword' }">{{
-                $t('login.forgetPwd')
-              }}</RouterLink>
+              <ElCheckbox v-model="formData.rememberPassword">记住密码</ElCheckbox>
             </div>
 
             <div style="margin-top: 30px">
@@ -90,15 +84,13 @@
                 :loading="loading"
                 v-ripple
               >
-                {{ $t('login.btnText') }}
+                登录
               </ElButton>
             </div>
 
             <div class="mt-5 text-sm text-gray-600">
-              <span>{{ $t('login.noAccount') }}</span>
-              <RouterLink class="text-theme" :to="{ name: 'Register' }">{{
-                $t('login.register')
-              }}</RouterLink>
+              <span>还没有账号？</span>
+              <RouterLink class="text-theme" :to="{ name: 'Register' }">立即注册</RouterLink>
             </div>
           </ElForm>
         </div>
@@ -108,10 +100,7 @@
 </template>
 
 <script setup lang="ts">
-  import AppConfig from '@/config'
   import { useUserStore } from '@/store/modules/user'
-  import { useI18n } from 'vue-i18n'
-  import { HttpError } from '@/utils/http/error'
   import { fetchLogin } from '@/api/auth'
   import { ElNotification, type FormInstance, type FormRules } from 'element-plus'
   import { useSettingStore } from '@/store/modules/setting'
@@ -120,47 +109,22 @@
 
   const settingStore = useSettingStore()
   const { isDark } = storeToRefs(settingStore)
-  const { t, locale } = useI18n()
+
   const formKey = ref(0)
 
-  // 监听语言切换，重置表单
-  watch(locale, () => {
-    formKey.value++
-  })
-
-  type AccountKey = 'super' | 'admin' | 'user'
-
-  export interface Account {
-    key: AccountKey
+  interface RoleOption {
+    value: 'student' | 'school_admin' | 'company_admin' | 'system_admin'
     label: string
-    userName: string
+    username: string
     password: string
-    roles: string[]
   }
 
-  const accounts = computed<Account[]>(() => [
-    {
-      key: 'super',
-      label: t('login.roles.super'),
-      userName: 'Super',
-      password: '123456',
-      roles: ['R_SUPER']
-    },
-    {
-      key: 'admin',
-      label: t('login.roles.admin'),
-      userName: 'Admin',
-      password: '123456',
-      roles: ['R_ADMIN']
-    },
-    {
-      key: 'user',
-      label: t('login.roles.user'),
-      userName: 'User',
-      password: '123456',
-      roles: ['R_USER']
-    }
-  ])
+  const roleOptions: RoleOption[] = [
+    { value: 'student', label: '学生', username: 'student', password: '123456' },
+    { value: 'school_admin', label: '学校管理员', username: 'school', password: '123456' },
+    { value: 'company_admin', label: '企业', username: 'company', password: '123456' },
+    { value: 'system_admin', label: '系统管理员', username: 'admin', password: 'Admin123!' }
+  ]
 
   const dragVerify = ref()
 
@@ -170,33 +134,41 @@
   const isPassing = ref(false)
   const isClickPass = ref(false)
 
-  const systemName = AppConfig.systemInfo.name
   const formRef = ref<FormInstance>()
 
   const formData = reactive({
-    account: '',
+    role: 'student' as 'student' | 'school_admin' | 'company_admin' | 'system_admin',
     username: '',
     password: '',
     rememberPassword: true
   })
 
   const rules = computed<FormRules>(() => ({
-    username: [{ required: true, message: t('login.placeholder.username'), trigger: 'blur' }],
-    password: [{ required: true, message: t('login.placeholder.password'), trigger: 'blur' }]
+    username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+    password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
   }))
 
   const loading = ref(false)
 
   onMounted(() => {
-    setupAccount('super')
+    setupAccount('student')
   })
 
   // 设置账号
-  const setupAccount = (key: AccountKey) => {
-    const selectedAccount = accounts.value.find((account: Account) => account.key === key)
-    formData.account = key
-    formData.username = selectedAccount?.userName ?? ''
-    formData.password = selectedAccount?.password ?? ''
+  const setupAccount = (key: 'student' | 'school_admin' | 'company_admin' | 'system_admin') => {
+    const selected = roleOptions.find(r => r.value === key)
+    if (selected) {
+      formData.username = selected.username
+      formData.password = selected.password
+    }
+  }
+
+  // 角色跳转映射
+  const roleRedirectMap = {
+    'student': '/student/dashboard',
+    'school_admin': '/school/dashboard',
+    'company_admin': '/company/dashboard',
+    'system_admin': '/admin/dashboard'
   }
 
   // 登录
@@ -204,11 +176,9 @@
     if (!formRef.value) return
 
     try {
-      // 表单验证
       const valid = await formRef.value.validate()
       if (!valid) return
 
-      // 拖拽验证
       if (!isPassing.value) {
         isClickPass.value = true
         return
@@ -216,38 +186,40 @@
 
       loading.value = true
 
-      // 登录请求
-      const { username, password } = formData
+      const { role, username, password } = formData
 
-      const { token, refreshToken } = await fetchLogin({
-        userName: username,
-        password
-      })
+      const res: any = await fetchLogin({ role, username, password })
 
-      // 验证token
-      if (!token) {
-        throw new Error('Login failed - no token received')
+      if (!res.access_token) {
+        throw new Error('登录失败')
       }
 
-      // 存储 token 和登录状态
-      userStore.setToken(token, refreshToken)
+      const { access_token, refresh_token, user } = res
+
+      // 存储 token 和用户信息
+      userStore.setToken(access_token, refresh_token)
       userStore.setLoginStatus(true)
+      userStore.setUserInfo(user)
 
-      // 登录成功处理
-      showLoginSuccessNotice()
+      // 跳转到对应角色的 dashboard
+      const redirect = roleRedirectMap[role as keyof typeof roleRedirectMap] || '/'
+      router.push(redirect)
 
-      // 获取 redirect 参数，如果存在则跳转到指定页面，否则跳转到首页
-      const redirect = route.query.redirect as string
-      router.push(redirect || '/')
-    } catch (error) {
-      // 处理 HttpError
-      if (error instanceof HttpError) {
-        // console.log(error.code)
-      } else {
-        // 处理非 HttpError
-        // ElMessage.error('登录失败，请稍后重试')
-        console.error('[Login] Unexpected error:', error)
-      }
+      ElNotification({
+        title: '登录成功',
+        type: 'success',
+        duration: 2500,
+        zIndex: 10000,
+        message: `欢迎回来，${user.real_name || user.username}！`
+      })
+    } catch (error: any) {
+      ElNotification({
+        title: '登录失败',
+        type: 'error',
+        duration: 3000,
+        zIndex: 10000,
+        message: error.message || '请稍后重试'
+      })
     } finally {
       loading.value = false
       resetDragVerify()
@@ -256,20 +228,7 @@
 
   // 重置拖拽验证
   const resetDragVerify = () => {
-    dragVerify.value.reset()
-  }
-
-  // 登录成功提示
-  const showLoginSuccessNotice = () => {
-    setTimeout(() => {
-      ElNotification({
-        title: t('login.success.title'),
-        type: 'success',
-        duration: 2500,
-        zIndex: 10000,
-        message: `${t('login.success.message')}, ${systemName}!`
-      })
-    }, 1000)
+    dragVerify.value?.reset()
   }
 </script>
 

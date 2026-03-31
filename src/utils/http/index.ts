@@ -28,6 +28,9 @@ const MAX_RETRIES = 0
 const RETRY_DELAY = 1000
 const UNAUTHORIZED_DEBOUNCE_TIME = 3000
 
+/** 请求去重Map - 防止同一请求在pending时重复发送 */
+const pendingRequests = new Map<string, AbortController>()
+
 /** 401防抖状态 */
 let isUnauthorizedErrorShown = false
 let unauthorizedTimer: NodeJS.Timeout | null = null
@@ -38,13 +41,13 @@ interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
   showSuccessMessage?: boolean
 }
 
-const { VITE_API_URL, VITE_WITH_CREDENTIALS } = import.meta.env
+const { VITE_API_BASE_URL, VITE_WITH_CREDENTIALS } = import.meta.env
 
 /** Axios实例 */
 const axiosInstance = axios.create({
   timeout: REQUEST_TIMEOUT,
-  baseURL: VITE_API_URL,
-  withCredentials: VITE_WITH_CREDENTIALS === 'true',
+  baseURL: VITE_API_BASE_URL,
+  withCredentials: true,
   validateStatus: (status) => status >= 200 && status < 300,
   transformResponse: [
     (data, headers) => {
@@ -65,7 +68,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (request: InternalAxiosRequestConfig) => {
     const { accessToken } = useUserStore()
-    if (accessToken) request.headers.set('Authorization', accessToken)
+    if (accessToken) request.headers.set('Authorization', `Bearer ${accessToken}`)
 
     if (request.data && !(request.data instanceof FormData) && !request.headers['Content-Type']) {
       request.headers.set('Content-Type', 'application/json')
@@ -83,10 +86,12 @@ axiosInstance.interceptors.request.use(
 /** 响应拦截器 */
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse<BaseResponse>) => {
-    const { code, msg } = response.data
-    if (code === ApiStatus.success) return response
-    if (code === ApiStatus.unauthorized) handleUnauthorizedError(msg)
-    throw createHttpError(msg || $t('httpMsg.requestFailed'), code)
+    // 201 Created 直接放行（后端某些创建接口无标准响应体）
+    if (response.status === ApiStatus.created) return response
+    const { code, message } = response.data
+    if (code === ApiStatus.success || code === ApiStatus.created) return response
+    if (code === ApiStatus.unauthorized) handleUnauthorizedError(message)
+    throw createHttpError(message || $t('httpMsg.requestFailed'), code)
   },
   (error) => {
     if (error.response?.status === ApiStatus.unauthorized) handleUnauthorizedError()
@@ -162,6 +167,9 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** 请求去重Map */
+const inflightRequests = new Map<string, Promise<any>>()
+
 /** 请求函数 */
 async function request<T = any>(config: ExtendedAxiosRequestConfig): Promise<T> {
   // POST | PUT 参数自动填充
@@ -174,22 +182,47 @@ async function request<T = any>(config: ExtendedAxiosRequestConfig): Promise<T> 
     config.params = undefined
   }
 
-  try {
-    const res = await axiosInstance.request<BaseResponse<T>>(config)
+  const t0 = performance.now()
+  const method = config.method?.toUpperCase() || 'GET'
+  const url = config.url || ''
 
-    // 显示成功消息
-    if (config.showSuccessMessage && res.data.msg) {
-      showSuccess(res.data.msg)
-    }
+  // 生成请求key用于去重
+  const requestKey = `${method}:${url}:${JSON.stringify(config.params || {})}:${JSON.stringify(config.data || {})}`
 
-    return res.data.data as T
-  } catch (error) {
-    if (error instanceof HttpError && error.code !== ApiStatus.unauthorized) {
-      const showMsg = config.showErrorMessage !== false
-      showError(error, showMsg)
-    }
-    return Promise.reject(error)
+  // 如果已有相同请求在执行中，直接返回那个Promise
+  if (inflightRequests.has(requestKey)) {
+    console.log(`[HTTP] ${method} ${url} 请求去重，复用已有请求`)
+    return inflightRequests.get(requestKey)
   }
+
+  // 创建请求Promise并存储
+  const requestPromise = (async () => {
+    try {
+      const res = await axiosInstance.request<BaseResponse<T>>(config)
+      const t1 = performance.now()
+      console.log(`[HTTP] ${method} ${url} 耗时: ${t1 - t0}ms`)
+
+      // 显示成功消息
+      if (config.showSuccessMessage && res.data.message) {
+        showSuccess(res.data.message)
+      }
+
+      return res.data.data !== undefined ? res.data.data : (res.data as T)
+    } catch (error: any) {
+      const t1 = performance.now()
+      console.log(`[HTTP] ${method} ${url} 失败，耗时: ${t1 - t0}ms`)
+      if (error instanceof HttpError && error.code !== ApiStatus.unauthorized) {
+        const showMsg = config.showErrorMessage !== false
+        showError(error, showMsg)
+      }
+      throw error
+    } finally {
+      inflightRequests.delete(requestKey)
+    }
+  })()
+
+  inflightRequests.set(requestKey, requestPromise)
+  return requestPromise
 }
 
 /** API方法集合 */
@@ -205,6 +238,9 @@ const api = {
   },
   del<T>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>({ ...config, method: 'DELETE' })
+  },
+  patch<T>(config: ExtendedAxiosRequestConfig) {
+    return retryRequest<T>({ ...config, method: 'PATCH' })
   },
   request<T>(config: ExtendedAxiosRequestConfig) {
     return retryRequest<T>(config)

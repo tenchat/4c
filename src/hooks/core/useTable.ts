@@ -229,6 +229,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
   const columnConfig = columnsFactory ? useTableColumns<TRecord>(columnsFactory) : null
   const columns = columnConfig?.columns
   const columnChecks = columnConfig?.columnChecks
+  const columnMethods = columnConfig
 
   // 是否有数据
   const hasData = computed(() => data.value.length > 0)

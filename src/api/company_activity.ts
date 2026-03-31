@@ -37,18 +37,17 @@ export interface ActivityQuery {
 }
 
 export const getActivities = (params?: ActivityQuery) =>
-  http.get<{ list: Activity[]; total: number; page: number; page_size: number }>(
-    { url: '/company/activities', params }
-  )
+  http.get<{ list: Activity[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/company/activities',
+    params
+  })
 
-export const getActivity = (id: string) =>
-  http.get<Activity>({ url: `/company/activities/${id}` })
+export const getActivity = (id: string) => http.get<Activity>({ url: `/api/v1/company/activities/${id}` })
 
 export const createActivity = (data: ActivityCreate) =>
-  http.post<Activity>({ url: '/company/activities', data })
+  http.post<Activity>({ url: '/api/v1/company/activities', data })
 
 export const updateActivity = (id: string, data: Partial<ActivityCreate>) =>
-  http.put<Activity>({ url: `/company/activities/${id}`, data })
+  http.put<Activity>({ url: `/api/v1/company/activities/${id}`, data })
 
-export const deleteActivity = (id: string) =>
-  http.delete({ url: `/company/activities/${id}` })
+export const deleteActivity = (id: string) => http.del({ url: `/api/v1/company/activities/${id}` })
