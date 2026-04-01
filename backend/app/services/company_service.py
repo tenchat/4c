@@ -4,7 +4,7 @@ from app.models.company import Company
 from app.models.job import JobDescription, JobApplication
 from app.models.student import StudentProfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class CompanyService:
@@ -32,11 +32,28 @@ class CompanyService:
             "trend_data": []
         }
 
-    async def get_jobs(self, company_id: str, status: int, page: int, page_size: int) -> dict:
+    async def get_jobs(
+        self,
+        company_id: str,
+        status: int,
+        page: int,
+        page_size: int,
+        title: str = None,
+        city: str = None,
+        industry: str = None,
+        min_salary: int = None,
+        max_salary: int = None
+    ) -> dict:
         """岗位列表"""
         conditions = [JobDescription.company_id == company_id]
         if status is not None:
             conditions.append(JobDescription.status == status)
+        if title:
+            conditions.append(JobDescription.title.like(f"%{title}%"))
+        if city:
+            conditions.append(JobDescription.city.like(f"%{city}%"))
+        if industry:
+            conditions.append(JobDescription.industry == industry)
 
         # 查询总数
         count_result = await self.db.execute(
@@ -106,6 +123,9 @@ class CompanyService:
 
     async def create_job(self, company_id: str, data: dict) -> str:
         """发布岗位"""
+        published_at = datetime.utcnow()
+        # Default expired_at is 30 days after publishing
+        expired_at = datetime.utcnow() + timedelta(days=30)
         job = JobDescription(
             job_id=str(uuid.uuid4()),
             company_id=company_id,
@@ -120,7 +140,8 @@ class CompanyService:
             keywords=data.get("keywords"),
             description=data.get("description"),
             status=1,
-            published_at=datetime.utcnow()
+            published_at=published_at,
+            expired_at=expired_at
         )
         self.db.add(job)
         await self.db.commit()

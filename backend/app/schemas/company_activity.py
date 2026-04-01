@@ -4,7 +4,8 @@ from datetime import date, time, datetime
 
 
 class ActivityCreate(BaseModel):
-    type: Literal["seminar", "job_fair"]
+    type: Literal["seminar", "job_fair", "other"]
+    type_name: Optional[str] = Field(None, max_length=50, description="当type为other时，自定义活动类型名称")
     title: str = Field(..., max_length=200)
     location: Optional[str] = Field(None, max_length=200)
     activity_date: date
@@ -15,6 +16,8 @@ class ActivityCreate(BaseModel):
 
 
 class ActivityUpdate(BaseModel):
+    type: Optional[Literal["seminar", "job_fair", "other"]] = None
+    type_name: Optional[str] = Field(None, max_length=50)
     title: Optional[str] = Field(None, max_length=200)
     location: Optional[str] = Field(None, max_length=200)
     activity_date: Optional[date] = None
@@ -29,6 +32,7 @@ class ActivityOut(BaseModel):
     activity_id: str
     company_id: str
     type: str
+    type_name: Optional[str] = None
     title: str
     location: Optional[str]
     activity_date: date

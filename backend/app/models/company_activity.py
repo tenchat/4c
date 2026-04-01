@@ -7,6 +7,7 @@ from app.models.base import Base, TimestampMixin
 class ActivityType(str, enum.Enum):
     seminar = "seminar"
     job_fair = "job_fair"
+    other = "other"
 
 
 class ActivityStatus(int, enum.Enum):
@@ -21,6 +22,7 @@ class CompanyActivity(Base, TimestampMixin):
     activity_id = Column(String(36), primary_key=True)
     company_id = Column(String(36), ForeignKey("companies.company_id", ondelete="CASCADE"), nullable=False, index=True)
     type = Column(SQLEnum(ActivityType, name="activity_type_enum", create_type=False), nullable=False, index=True)
+    type_name = Column(String(50), nullable=True, comment="当type为other时，自定义活动类型名称")
     title = Column(String(200), nullable=False)
     location = Column(String(200), nullable=True)
     activity_date = Column(Date, nullable=False, index=True)

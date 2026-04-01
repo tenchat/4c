@@ -4,7 +4,8 @@ import http from '@/utils/http'
 export interface Activity {
   activity_id: string
   company_id: string
-  type: 'seminar' | 'job_fair'
+  type: 'seminar' | 'job_fair' | 'other'
+  type_name?: string
   title: string
   location?: string
   activity_date: string
@@ -18,7 +19,8 @@ export interface Activity {
 }
 
 export interface ActivityCreate {
-  type: 'seminar' | 'job_fair'
+  type: 'seminar' | 'job_fair' | 'other'
+  type_name?: string
   title: string
   location?: string
   activity_date: string
@@ -29,9 +31,11 @@ export interface ActivityCreate {
 }
 
 export interface ActivityQuery {
-  type?: 'seminar' | 'job_fair'
+  type?: 'seminar' | 'job_fair' | 'other'
   year?: number
   status?: number
+  min_expected_num?: number
+  max_expected_num?: number
   page?: number
   page_size?: number
 }
@@ -42,7 +46,8 @@ export const getActivities = (params?: ActivityQuery) =>
     params
   })
 
-export const getActivity = (id: string) => http.get<Activity>({ url: `/api/v1/company/activities/${id}` })
+export const getActivity = (id: string) =>
+  http.get<Activity>({ url: `/api/v1/company/activities/${id}` })
 
 export const createActivity = (data: ActivityCreate) =>
   http.post<Activity>({ url: '/api/v1/company/activities', data })
@@ -51,3 +56,6 @@ export const updateActivity = (id: string, data: Partial<ActivityCreate>) =>
   http.put<Activity>({ url: `/api/v1/company/activities/${id}`, data })
 
 export const deleteActivity = (id: string) => http.del({ url: `/api/v1/company/activities/${id}` })
+
+export const toggleActivityStatus = (id: string, status: number) =>
+  http.patch<Activity>({ url: `/api/v1/company/activities/${id}/status`, params: { status } })
