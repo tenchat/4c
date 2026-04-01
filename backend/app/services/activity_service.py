@@ -18,20 +18,24 @@ class ActivityService:
         type: Optional[str] = None,
         year: Optional[int] = None,
         status: Optional[int] = None,
+        min_expected_num: Optional[int] = None,
+        max_expected_num: Optional[int] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict:
         conditions = [CompanyActivity.company_id == company_id]
-        # Exclude soft-deleted (status=0) by default
-        if status is not None:
+        # status=-1 means show all including cancelled, otherwise filter by status
+        if status is not None and status != -1:
             conditions.append(CompanyActivity.status == status)
-        else:
-            conditions.append(CompanyActivity.status != ActivityStatus.cancelled.value)
 
         if type:
-            conditions.append(CompanyActivity.type == type)
+            conditions.append(CompanyActivity.type == ActivityType(type))
         if year:
             conditions.append(func.year(CompanyActivity.activity_date) == year)
+        if min_expected_num is not None:
+            conditions.append(CompanyActivity.expected_num >= min_expected_num)
+        if max_expected_num is not None:
+            conditions.append(CompanyActivity.expected_num <= max_expected_num)
 
         count_result = await self.db.execute(
             select(func.count()).select_from(CompanyActivity).where(and_(*conditions))
@@ -63,6 +67,7 @@ class ActivityService:
             activity_id=str(uuid.uuid4()),
             company_id=company_id,
             type=ActivityType(data.type),
+            type_name=data.type_name,
             title=data.title,
             location=data.location,
             activity_date=data.activity_date,
@@ -89,8 +94,17 @@ class ActivityService:
 
     async def delete_activity(self, activity_id: str, company_id: str) -> None:
         row = await self._get_owned(activity_id, company_id)
-        row.status = ActivityStatus.cancelled.value
+        await self.db.delete(row)
         await self.db.commit()
+
+    async def toggle_activity_status(
+        self, activity_id: str, company_id: str, status: int
+    ) -> Optional[ActivityOut]:
+        row = await self._get_owned(activity_id, company_id)
+        row.status = status
+        await self.db.commit()
+        await self.db.refresh(row)
+        return ActivityOut.model_validate(row)
 
     async def _get_owned(self, activity_id: str, company_id: str) -> CompanyActivity:
         result = await self.db.execute(

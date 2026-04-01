@@ -47,11 +47,17 @@ async def get_jobs(
     db: AsyncSession = Depends(get_db),
     service: CompanyService = Depends(get_company_service),
     status: int = Query(None, description="岗位状态 1招聘中 0暂停 2结束"),
+    title: str = Query(None, description="岗位名称模糊搜索"),
+    city: str = Query(None, description="工作城市模糊搜索"),
+    industry: str = Query(None, description="行业"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100)
 ):
     company_id = await get_company_id(db, payload.get("sub"))
-    data = await service.get_jobs(company_id, status, page, page_size)
+    data = await service.get_jobs(
+        company_id, status, page, page_size,
+        title=title, city=city, industry=industry
+    )
 
     return {
         "code": 200,
@@ -217,6 +223,8 @@ async def list_activities(
     type: Optional[str] = Query(None),
     year: Optional[int] = Query(None),
     status: Optional[int] = Query(None),
+    min_expected_num: Optional[int] = Query(None),
+    max_expected_num: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     payload: dict = Depends(get_current_user),
@@ -224,7 +232,17 @@ async def list_activities(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = ActivityService(db)
-    return await svc.list_activities(company_id, type=type, year=year, status=status, page=page, page_size=page_size)
+    data = await svc.list_activities(
+        company_id,
+        type=type,
+        year=year,
+        status=status,
+        min_expected_num=min_expected_num,
+        max_expected_num=max_expected_num,
+        page=page,
+        page_size=page_size
+    )
+    return {"code": 200, "message": "success", "data": data}
 
 
 @router.post("/activities", status_code=201)
@@ -235,7 +253,8 @@ async def create_activity(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = ActivityService(db)
-    return await svc.create_activity(company_id, data)
+    activity = await svc.create_activity(company_id, data)
+    return {"code": 200, "message": "创建成功", "data": activity}
 
 
 @router.get("/activities/{activity_id}", response_model=ActivityOut)
@@ -246,10 +265,11 @@ async def get_activity(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = ActivityService(db)
-    return await svc.get_activity(activity_id, company_id)
+    activity = await svc.get_activity(activity_id, company_id)
+    return {"code": 200, "message": "success", "data": activity}
 
 
-@router.put("/activities/{activity_id}", response_model=ActivityOut)
+@router.put("/activities/{activity_id}")
 async def update_activity(
     activity_id: str,
     data: ActivityUpdate,
@@ -258,10 +278,11 @@ async def update_activity(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = ActivityService(db)
-    return await svc.update_activity(activity_id, company_id, data)
+    activity = await svc.update_activity(activity_id, company_id, data)
+    return {"code": 200, "message": "更新成功", "data": activity}
 
 
-@router.delete("/activities/{activity_id}", status_code=204)
+@router.delete("/activities/{activity_id}")
 async def delete_activity(
     activity_id: str,
     payload: dict = Depends(get_current_user),
@@ -270,6 +291,23 @@ async def delete_activity(
     company_id = await get_company_id(db, payload.get("sub"))
     svc = ActivityService(db)
     await svc.delete_activity(activity_id, company_id)
+    return {"code": 200, "message": "删除成功"}
+
+
+@router.patch("/activities/{activity_id}/status")
+async def toggle_activity_status(
+    activity_id: str,
+    status: int = Query(..., description="状态: 0已取消 1进行中 2已结束"),
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    company_id = await get_company_id(db, payload.get("sub"))
+    svc = ActivityService(db)
+    activity = await svc.toggle_activity_status(activity_id, company_id, status)
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    status_text = {0: "取消", 1: "开始", 2: "结束"}.get(status, "操作")
+    return {"code": 200, "message": f"{status_text}成功", "data": activity}
 
 
 # --- Announcement routes ---
@@ -285,7 +323,8 @@ async def list_announcements(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = AnnouncementService(db)
-    return await svc.list_announcements(company_id, status=status, year=year, page=page, page_size=page_size)
+    data = await svc.list_announcements(company_id, status=status, year=year, page=page, page_size=page_size)
+    return {"code": 200, "message": "success", "data": data}
 
 
 @router.post("/announcements", status_code=201)
@@ -296,7 +335,8 @@ async def create_announcement(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = AnnouncementService(db)
-    return await svc.create_announcement(company_id, data)
+    announcement = await svc.create_announcement(company_id, data)
+    return {"code": 200, "message": "创建成功", "data": announcement}
 
 
 @router.get("/announcements/{announcement_id}", response_model=AnnouncementOut)
@@ -307,10 +347,11 @@ async def get_announcement(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = AnnouncementService(db)
-    return await svc.get_announcement(announcement_id, company_id)
+    announcement = await svc.get_announcement(announcement_id, company_id)
+    return {"code": 200, "message": "success", "data": announcement}
 
 
-@router.put("/announcements/{announcement_id}", response_model=AnnouncementOut)
+@router.put("/announcements/{announcement_id}")
 async def update_announcement(
     announcement_id: str,
     data: AnnouncementUpdate,
@@ -319,7 +360,8 @@ async def update_announcement(
 ):
     company_id = await get_company_id(db, payload.get("sub"))
     svc = AnnouncementService(db)
-    return await svc.update_announcement(announcement_id, company_id, data)
+    announcement = await svc.update_announcement(announcement_id, company_id, data)
+    return {"code": 200, "message": "更新成功", "data": announcement}
 
 
 @router.delete("/announcements/{announcement_id}", status_code=204)
@@ -331,3 +373,4 @@ async def delete_announcement(
     company_id = await get_company_id(db, payload.get("sub"))
     svc = AnnouncementService(db)
     await svc.delete_announcement(announcement_id, company_id)
+    return {"code": 200, "message": "删除成功"}
