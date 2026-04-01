@@ -185,9 +185,15 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     "title" TEXT NOT NULL,
     "content" TEXT,
     "doc_type" TEXT,
+    "category" TEXT DEFAULT 'shared',
+    "vector_ids" TEXT,
     "created_at" TEXT NOT NULL,
     "updated_at" TEXT NOT NULL
 );
+
+-- 为已有数据库添加缺失列（SQLite 不支持 ADD COLUMN IF NOT EXISTS，需手动执行）
+-- ALTER TABLE knowledge_documents ADD COLUMN "category" TEXT DEFAULT 'shared';
+-- ALTER TABLE knowledge_documents ADD COLUMN "vector_ids" TEXT;
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS system_configs (

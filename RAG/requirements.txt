@@ -1,0 +1,27 @@
+# RAG 服务依赖
+
+# FastAPI 生态
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# 数据库
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# LangChain 生态
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-chroma>=0.1.0
+langchain-text-splitters>=0.1.0
+
+
+# 文档解析
+pymupdf>=1.23.0
+python-docx>=1.1.0
+
+# 向量数据库
+chromadb>=0.4.22
+
+# 其他
+python-multipart>=0.0.6  # FastAPI 文件上传
