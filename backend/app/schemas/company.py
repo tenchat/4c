@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 
 class JobCreate(BaseModel):
@@ -39,3 +39,30 @@ class CompanyDashboardResponse(BaseModel):
     received_resumes: int
     hired_count: int
     trend_data: List[dict]
+
+
+class ProfileUpdateRequest(BaseModel):
+    """企业档案更新请求（提交审核）"""
+    company_name: str
+    industry: Optional[str] = None
+    city: Optional[str] = None
+    size: Optional[str] = None
+    description: Optional[str] = None
+    address: Optional[str] = None
+    email: Optional[str] = None
+    contact: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
+class ProfilePendingResponse(BaseModel):
+    """待审核信息响应"""
+    pending_id: str
+    company_id: str
+    address: Optional[str]
+    email: Optional[str]
+    contact: Optional[str]
+    contact_phone: Optional[str]
+    status: str
+    reject_reason: Optional[str]
+    submitted_at: str
+    reviewed_at: Optional[str]

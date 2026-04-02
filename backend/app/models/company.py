@@ -14,6 +14,12 @@ class Company(Base, TimestampMixin):
     size = Column(String(20))  # 规模：50人以下/50-200人等
     description = Column(Text)
     verified = Column(Boolean, nullable=False, default=False, index=True)  # 管理员审核，已添加索引
+    # 新增字段
+    address = Column(Text)  # 地址
+    email = Column(String(255))  # 邮箱
+    contact = Column(String(100))  # 联系人
+    contact_phone = Column(String(50))  # 联系方式
 
     activities = relationship("CompanyActivity", back_populates="company", cascade="all, delete-orphan")
     announcements = relationship("CompanyAnnouncement", back_populates="company", cascade="all, delete-orphan")
+    profile_pending = relationship("CompanyProfilePending", back_populates="company", cascade="all, delete-orphan")

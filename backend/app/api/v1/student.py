@@ -69,7 +69,7 @@ async def get_profile(
             "degree": profile.degree,
             "graduation_year": profile.graduation_year,
             "province_origin": profile.province_origin,
-            "gpa": float(profile.gpa) if profile.gpa else None,
+            "gpa": float(profile.gpa) if profile.gpa is not None and str(profile.gpa).replace('.', '').isdigit() else None,
             "skills": profile.skills,
             "internship": profile.internship,
             "employment_status": profile.employment_status,

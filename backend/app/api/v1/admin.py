@@ -146,6 +146,50 @@ async def verify_company(
     return {"code": 200, "message": "操作成功"}
 
 
+@router.get("/company-profile-updates/pending")
+async def get_pending_profile_updates(
+    status: str = "pending",
+    current: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """获取待审核的企业信息更新列表"""
+    items, total = await service.get_pending_profile_updates(status, current, size)
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "list": items,
+            "total": total,
+            "current": current,
+            "size": size
+        }
+    }
+
+
+@router.put("/company-profile-updates/{pending_id}/review")
+async def review_profile_update(
+    pending_id: str,
+    data: dict,
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """审核企业信息更新"""
+    action = data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="无效的操作")
+
+    reviewer_id = payload.get("sub")
+    reject_reason = data.get("reject_reason")
+
+    success = await service.review_profile_update(pending_id, action, reject_reason, reviewer_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="待审核记录不存在")
+
+    return {"code": 200, "message": "操作成功"}
+
+
 @router.get("/enterprise-stats")
 async def get_enterprise_stats(
     year: Optional[int] = Query(None),

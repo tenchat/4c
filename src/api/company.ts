@@ -1,13 +1,11 @@
 import request from '@/utils/http'
 
-export const fetchCompanyDashboard = () =>
-  request.get<any>({ url: '/api/v1/company/dashboard' })
+export const fetchCompanyDashboard = () => request.get<any>({ url: '/api/v1/company/dashboard' })
 
 export const fetchCompanyJobs = (params?: any) =>
   request.get<any>({ url: '/api/v1/company/jobs', params })
 
-export const getJob = (jobId: string) =>
-  request.get<any>({ url: `/api/v1/company/jobs/${jobId}` })
+export const getJob = (jobId: string) => request.get<any>({ url: `/api/v1/company/jobs/${jobId}` })
 
 export interface JobCreateParams {
   title: string
@@ -34,8 +32,25 @@ export const deleteJob = (jobId: string) =>
 export const toggleJobStatus = (jobId: string, status: number) =>
   request.patch<any>({ url: `/api/v1/company/jobs/${jobId}/status`, data: { status } })
 
-export const fetchCompanyProfile = () =>
-  request.get<any>({ url: '/api/v1/company/profile' })
+export const fetchCompanyProfile = () => request.get<any>({ url: '/api/v1/company/profile' })
 
 export const updateCompanyProfile = (data: any) =>
   request.put<any>({ url: '/api/v1/company/profile', data })
+
+export interface ProfileUpdateParams {
+  company_name: string
+  industry?: string
+  city?: string
+  size?: string
+  description?: string
+  address?: string
+  email?: string
+  contact?: string
+  contact_phone?: string
+}
+
+export const submitCompanyProfileForReview = (data: ProfileUpdateParams) =>
+  request.post<any>({ url: '/api/v1/company/profile/submit', data })
+
+export const fetchPendingProfile = () =>
+  request.get<any>({ url: '/api/v1/company/profile/pending' })

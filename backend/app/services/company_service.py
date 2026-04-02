@@ -1,10 +1,18 @@
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.company import Company
+from app.models.company_profile_pending import CompanyProfilePending
 from app.models.job import JobDescription, JobApplication
 from app.models.student import StudentProfile
 import uuid
 from datetime import datetime, timedelta
+
+
+def format_datetime_minute(dt) -> str | None:
+    """格式化时间到分钟，不显示秒"""
+    if dt is None:
+        return None
+    return dt.strftime("%Y-%m-%d %H:%M")
 
 
 class CompanyService:
@@ -86,8 +94,8 @@ class CompanyService:
                 "keywords": j.keywords,
                 "description": j.description,
                 "status": j.status,
-                "published_at": str(j.published_at) if j.published_at else None,
-                "expired_at": str(j.expired_at) if j.expired_at else None
+                "published_at": format_datetime_minute(j.published_at),
+                "expired_at": format_datetime_minute(j.expired_at)
             } for j in jobs],
             "total": total,
             "page": page,
@@ -117,8 +125,8 @@ class CompanyService:
             "keywords": job.keywords,
             "description": job.description,
             "status": job.status,
-            "published_at": str(job.published_at) if job.published_at else None,
-            "expired_at": str(job.expired_at) if job.expired_at else None
+            "published_at": format_datetime_minute(job.published_at),
+            "expired_at": format_datetime_minute(job.expired_at)
         }
 
     async def create_job(self, company_id: str, data: dict) -> str:
@@ -223,3 +231,88 @@ class CompanyService:
 
         await self.db.commit()
         return True
+
+    async def submit_profile_for_review(self, company_id: str, data: dict) -> str:
+        """提交企业档案更新申请"""
+        # 检查是否有待审核的申请
+        pending_result = await self.db.execute(
+            select(CompanyProfilePending)
+            .where(
+                and_(
+                    CompanyProfilePending.company_id == company_id,
+                    CompanyProfilePending.status == "pending"
+                )
+            )
+        )
+        existing_pending = pending_result.scalar_one_or_none()
+        if existing_pending:
+            raise ValueError("已有待审核的申请，请等待审核完成")
+
+        # 创建新的待审核申请
+        pending_id = str(uuid.uuid4())
+        pending = CompanyProfilePending(
+            pending_id=pending_id,
+            company_id=company_id,
+            address=data.get("address"),
+            email=data.get("email"),
+            contact=data.get("contact"),
+            contact_phone=data.get("contact_phone"),
+            status="pending",
+            submitted_at=datetime.utcnow()
+        )
+        self.db.add(pending)
+        await self.db.commit()
+        return pending_id
+
+    async def get_pending_profile(self, company_id: str) -> dict | None:
+        """获取企业的待审核信息"""
+        result = await self.db.execute(
+            select(CompanyProfilePending)
+            .where(
+                and_(
+                    CompanyProfilePending.company_id == company_id,
+                    CompanyProfilePending.status == "pending"
+                )
+            )
+        )
+        pending = result.scalar_one_or_none()
+        if not pending:
+            return None
+        return {
+            "pending_id": pending.pending_id,
+            "company_id": pending.company_id,
+            "address": pending.address,
+            "email": pending.email,
+            "contact": pending.contact,
+            "contact_phone": pending.contact_phone,
+            "status": pending.status,
+            "reject_reason": pending.reject_reason,
+            "submitted_at": str(pending.submitted_at),
+            "reviewed_at": str(pending.reviewed_at) if pending.reviewed_at else None
+        }
+
+    async def get_profile_with_pending(self, company_id: str) -> dict | None:
+        """获取企业档案及待审核状态"""
+        company = await self.get_profile(company_id)
+        if not company:
+            return None
+
+        pending = await self.get_pending_profile(company_id)
+
+        # 合并待审核信息到返回数据
+        result = {
+            "company_id": company.company_id,
+            "account_id": company.account_id,
+            "company_name": company.company_name,
+            "industry": company.industry,
+            "city": company.city,
+            "size": company.size,
+            "description": company.description,
+            "verified": company.verified,
+            "address": company.address,
+            "email": company.email,
+            "contact": company.contact,
+            "contact_phone": company.contact_phone,
+            "pending_update": pending
+        }
+        return result

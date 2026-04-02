@@ -1,7 +1,6 @@
 import request from '@/utils/http'
 
-export const fetchAdminDashboard = () =>
-  request.get<any>({ url: '/api/v1/admin/dashboard' })
+export const fetchAdminDashboard = () => request.get<any>({ url: '/api/v1/admin/dashboard' })
 
 export const fetchAdminStatistics = (params?: any) =>
   request.get<any>({ url: '/api/v1/admin/statistics', params })
@@ -18,11 +17,24 @@ export const importColleges = (formData: FormData) =>
 export const fetchScarceTalents = (params?: any) =>
   request.get<any>({ url: '/api/v1/admin/scarce-talents', params })
 
-export const fetchAdminDataboard = () =>
-  request.get<any>({ url: '/api/v1/admin/databoard' })
+export const fetchAdminDataboard = () => request.get<any>({ url: '/api/v1/admin/databoard' })
 
 export const fetchPendingCompanies = (params?: { status?: number }) =>
   request.get<any>({ url: '/api/v1/admin/companies/pending', params })
 
 export const verifyCompany = (companyId: string, action: 'approve' | 'reject') =>
   request.put<any>({ url: `/api/v1/admin/companies/${companyId}/verify`, data: { action } })
+
+export const fetchPendingProfileUpdates = (params?: {
+  status?: string
+  current?: number
+  size?: number
+}) => request.get<any>({ url: '/api/v1/admin/company-profile-updates/pending', params })
+
+export interface ProfileReviewParams {
+  action: 'approve' | 'reject'
+  reject_reason?: string
+}
+
+export const reviewProfileUpdate = (pendingId: string, data: ProfileReviewParams) =>
+  request.put<any>({ url: `/api/v1/admin/company-profile-updates/${pendingId}/review`, data })
