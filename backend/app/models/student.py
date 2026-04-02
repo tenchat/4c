@@ -17,7 +17,7 @@ class StudentProfile(Base, TimestampMixin):
     degree = Column(Integer, default=1)  # 1本科 2硕士 3博士
     graduation_year = Column(Integer)
     province_origin = Column(String(20))  # 生源省份
-    gpa = Column(DECIMAL(3, 2))
+    gpa = Column(String(10))  # 存储为字符串，API层做类型转换
     skills = Column(JSON)  # ["Python","Java"]
     internship = Column(String(1000))
     employment_status = Column(Integer, default=0, index=True)  # 0待就业 1已就业 2升学 3出国

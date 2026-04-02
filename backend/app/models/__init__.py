@@ -14,6 +14,7 @@ from app.models.system_config import SystemConfig
 from app.models.operation_log import OperationLog
 from app.models.company_activity import CompanyActivity, ActivityType, ActivityStatus
 from app.models.company_announcement import CompanyAnnouncement, AnnouncementStatus
+from app.models.company_profile_pending import CompanyProfilePending
 
 __all__ = [
     "Base",
@@ -38,4 +39,5 @@ __all__ = [
     "ActivityStatus",
     "CompanyAnnouncement",
     "AnnouncementStatus",
+    "CompanyProfilePending",
 ]

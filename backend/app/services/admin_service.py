@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.account import Account, AccountStatus
 from app.models.student import StudentProfile
 from app.models.company import Company
+from app.models.company_profile_pending import CompanyProfilePending
 from app.models.job import JobDescription, JobApplication
 from app.models.university import University
 from app.models.college_employment import CollegeEmployment
@@ -10,6 +11,7 @@ from app.models.scarce_talent import ScarceTalent
 from app.core.redis_client import get_redis
 import json
 import uuid
+from datetime import datetime
 
 
 class AdminService:
@@ -335,6 +337,100 @@ class AdminService:
             company.verified = False
             if account:
                 account.status = AccountStatus.disabled.value
+            await self.db.commit()
+            return True
+
+        return False
+
+    async def get_pending_profile_updates(self, status: str = "pending", current: int = 1, size: int = 20) -> tuple:
+        """获取待审核的企业信息更新列表"""
+        offset = (current - 1) * size
+
+        # 查询总数
+        count_result = await self.db.execute(
+            select(func.count()).select_from(CompanyProfilePending)
+            .where(CompanyProfilePending.status == status)
+        )
+        total = count_result.scalar() or 0
+
+        # 分页查询
+        result = await self.db.execute(
+            select(CompanyProfilePending)
+            .where(CompanyProfilePending.status == status)
+            .order_by(CompanyProfilePending.submitted_at.desc())
+            .offset(offset)
+            .limit(size)
+        )
+        pending_list = result.scalars().all()
+
+        # 获取企业信息
+        items = []
+        for p in pending_list:
+            company_result = await self.db.execute(
+                select(Company).where(Company.company_id == p.company_id)
+            )
+            company = company_result.scalar_one_or_none()
+
+            items.append({
+                "pending_id": p.pending_id,
+                "company_id": p.company_id,
+                "company_name": company.company_name if company else "",
+                "industry": company.industry if company else "",
+                "city": company.city if company else "",
+                "size": company.size if company else "",
+                "description": company.description if company else "",
+                "current_address": company.address if company else "",
+                "current_email": company.email if company else "",
+                "current_contact": company.contact if company else "",
+                "current_contact_phone": company.contact_phone if company else "",
+                "address": p.address,
+                "email": p.email,
+                "contact": p.contact,
+                "contact_phone": p.contact_phone,
+                "status": p.status,
+                "reject_reason": p.reject_reason,
+                "submitted_at": str(p.submitted_at),
+                "reviewed_at": str(p.reviewed_at) if p.reviewed_at else None
+            })
+
+        return items, total
+
+    async def review_profile_update(self, pending_id: str, action: str, reject_reason: str = None, reviewer_id: str = None) -> bool:
+        """审核企业信息更新"""
+        result = await self.db.execute(
+            select(CompanyProfilePending).where(CompanyProfilePending.pending_id == pending_id)
+        )
+        pending = result.scalar_one_or_none()
+        if not pending:
+            return False
+
+        if action == "approve":
+            # 审核通过，更新企业信息
+            company_result = await self.db.execute(
+                select(Company).where(Company.company_id == pending.company_id)
+            )
+            company = company_result.scalar_one_or_none()
+            if company:
+                if pending.address is not None:
+                    company.address = pending.address
+                if pending.email is not None:
+                    company.email = pending.email
+                if pending.contact is not None:
+                    company.contact = pending.contact
+                if pending.contact_phone is not None:
+                    company.contact_phone = pending.contact_phone
+
+            pending.status = "approved"
+            pending.reviewed_at = datetime.utcnow()
+            pending.reviewed_by = reviewer_id
+            await self.db.commit()
+            return True
+
+        elif action == "reject":
+            pending.status = "rejected"
+            pending.reject_reason = reject_reason
+            pending.reviewed_at = datetime.utcnow()
+            pending.reviewed_by = reviewer_id
             await self.db.commit()
             return True
 

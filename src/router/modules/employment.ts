@@ -123,6 +123,16 @@ const schoolRoutes: AppRouteRecord = {
         title: '数据大屏',
         keepAlive: false
       }
+    },
+    {
+      path: 'profile-review',
+      name: 'SchoolProfileReview',
+      component: '/admin/profile-review',
+      meta: {
+        title: '信息审核',
+        keepAlive: true,
+        roles: ['school_admin', 'system_admin']
+      }
     }
   ]
 }
@@ -163,6 +173,16 @@ const adminRoutes: AppRouteRecord = {
       meta: {
         title: '企业管理',
         keepAlive: true
+      }
+    },
+    {
+      path: 'profile-review',
+      name: 'AdminProfileReview',
+      component: '/admin/profile-review',
+      meta: {
+        title: '信息审核',
+        keepAlive: true,
+        roles: ['system_admin', 'school_admin']
       }
     },
     {

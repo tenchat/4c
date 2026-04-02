@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.company import Company
 from app.services.company_service import CompanyService
-from app.schemas.company import JobCreate, JobStatusUpdate
+from app.schemas.company import JobCreate, JobStatusUpdate, ProfileUpdateRequest, ProfilePendingResponse
 
 router = APIRouter()
 
@@ -163,7 +163,7 @@ async def get_profile(
     service: CompanyService = Depends(get_company_service)
 ):
     company_id = await get_company_id(db, payload.get("sub"))
-    profile = await service.get_profile(company_id)
+    profile = await service.get_profile_with_pending(company_id)
 
     if not profile:
         raise HTTPException(status_code=404, detail="企业信息不存在")
@@ -171,33 +171,43 @@ async def get_profile(
     return {
         "code": 200,
         "message": "success",
-        "data": {
-            "company_id": profile.company_id,
-            "account_id": profile.account_id,
-            "company_name": profile.company_name,
-            "industry": profile.industry,
-            "city": profile.city,
-            "size": profile.size,
-            "description": profile.description,
-            "verified": profile.verified,
-        }
+        "data": profile
     }
 
 
-@router.put("/profile")
-async def update_profile(
-    data: dict,
+@router.post("/profile/submit")
+async def submit_profile_for_review(
+    data: ProfileUpdateRequest,
     payload: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: CompanyService = Depends(get_company_service)
 ):
+    """提交企业档案更新申请（需审核）"""
     company_id = await get_company_id(db, payload.get("sub"))
-    success = await service.update_profile(company_id, data)
 
-    if not success:
-        raise HTTPException(status_code=404, detail="企业信息不存在")
+    try:
+        pending_id = await service.submit_profile_for_review(company_id, data.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    return {"code": 200, "message": "更新成功"}
+    return {"code": 200, "message": "提交成功，请等待学校管理员审核", "data": {"pending_id": pending_id}}
+
+
+@router.get("/profile/pending")
+async def get_pending_profile(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service)
+):
+    """获取待审核的企业信息更新"""
+    company_id = await get_company_id(db, payload.get("sub"))
+    pending = await service.get_pending_profile(company_id)
+
+    return {
+        "code": 200,
+        "message": "success",
+        "data": pending
+    }
 
 
 from fastapi import APIRouter, Depends, Query
