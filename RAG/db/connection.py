@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # 数据库路径
 # 优先使用 backend 目录下的 SQLite 数据库文件
-BACKEND_DB_PATH = Path(__file__).parent.parent / "backend" / "schema.sqlite.db"
+BACKEND_DB_PATH = Path(__file__).parent.parent.parent / "backend" / "employment.db"
 LOCAL_DB_PATH = Path(__file__).parent.parent / "data" / "rag_sqlite.db"
 
 # 选择存在的数据库文件

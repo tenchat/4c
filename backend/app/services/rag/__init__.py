@@ -1,2 +1,4 @@
 # RAG services package
-# TODO: AI - ChromaDB knowledge base implementation
+from app.services.rag.rag_service import RAGService, get_rag_service, RAGServiceError
+
+__all__ = ["RAGService", "get_rag_service", "RAGServiceError"]

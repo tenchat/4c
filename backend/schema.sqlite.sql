@@ -33,10 +33,10 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 -- 大学表
 CREATE TABLE IF NOT EXISTS universities (
     "university_id" TEXT PRIMARY KEY,
-    "university_name" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "province" TEXT,
     "city" TEXT,
-    "description" TEXT,
+    "type" TEXT,
     "created_at" TEXT NOT NULL,
     "updated_at" TEXT NOT NULL
 );

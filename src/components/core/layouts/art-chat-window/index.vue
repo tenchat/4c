@@ -55,6 +55,23 @@
               </div>
             </div>
           </template>
+          <!-- AI 思考中 -->
+          <div v-if="isLoading" class="mb-7.5 flex w-full items-start gap-2">
+            <ElAvatar :size="32" :src="aiAvatar" class="shrink-0" />
+            <div class="flex max-w-[70%] flex-col items-start">
+              <div class="mb-1 flex gap-2 text-xs">
+                <span class="font-medium">{{ BOT_NAME }}</span>
+                <span class="text-g-600">{{ formatCurrentTime() }}</span>
+              </div>
+              <div class="rounded-md bg-g-300/50 px-3.5 py-2.5 text-sm leading-[1.4]">
+                <span class="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 聊天输入区域 -->
@@ -65,13 +82,23 @@
             :rows="3"
             placeholder="输入消息"
             resize="none"
+            :disabled="isLoading"
             @keyup.enter.prevent="sendMessage"
           >
             <template #append>
               <div class="flex gap-2 py-2">
-                <ElButton :icon="Paperclip" circle plain />
+                <ElUpload
+                  :auto-upload="false"
+                  :show-file-list="false"
+                  accept=".txt,.pdf,.docx,.doc"
+                  @change="handleFileUpload"
+                >
+                  <template #trigger>
+                    <ElButton :icon="Paperclip" circle plain :loading="uploadLoading" />
+                  </template>
+                </ElUpload>
                 <ElButton :icon="Picture" circle plain />
-                <ElButton type="primary" @click="sendMessage" v-ripple>发送</ElButton>
+                <ElButton type="primary" @click="sendMessage" :disabled="isLoading" v-ripple>发送</ElButton>
               </div>
             </template>
           </ElInput>
@@ -80,7 +107,7 @@
               <ArtSvgIcon icon="ri:image-line" class="mr-5 c-p text-g-600 text-lg" />
               <ArtSvgIcon icon="ri:emotion-happy-line" class="mr-5 c-p text-g-600 text-lg" />
             </div>
-            <ElButton type="primary" @click="sendMessage" v-ripple class="min-w-20">发送</ElButton>
+            <ElButton type="primary" @click="sendMessage" :disabled="isLoading" v-ripple class="min-w-20">发送</ElButton>
           </div>
         </div>
       </div>
@@ -90,9 +117,12 @@
 
 <script setup lang="ts">
   import { Picture, Paperclip, Close } from '@element-plus/icons-vue'
+  import { ElMessage } from 'element-plus'
+  import { UploadFile } from 'element-plus'
   import { mittBus } from '@/utils/sys'
   import meAvatar from '@/assets/images/avatar/avatar5.webp'
   import aiAvatar from '@/assets/images/avatar/avatar10.webp'
+  import { aiQAStream, getChatHistory, uploadKnowledge } from '@/api/ai'
 
   defineOptions({ name: 'ArtChatWindow' })
 
@@ -111,6 +141,7 @@
   const SCROLL_DELAY = 100
   const BOT_NAME = 'Art Bot'
   const USER_NAME = 'Ricky'
+  const SESSION_KEY = 'art_chat_session_id'
 
   // 响应式布局
   const { width } = useWindowSize()
@@ -124,6 +155,12 @@
   const messageText = ref('')
   const messageId = ref(10)
   const messageContainer = ref<HTMLElement | null>(null)
+  const isLoading = ref(false)
+  const uploadLoading = ref(false)
+
+  // AI 相关状态
+  const sessionId = ref<string>(localStorage.getItem(SESSION_KEY) || '')
+  const roleType = ref('student')
 
   // 初始化聊天消息数据
   const initializeMessages = (): ChatMessage[] => [
@@ -132,70 +169,6 @@
       sender: BOT_NAME,
       content: '你好！我是你的AI助手，有什么我可以帮你的吗？',
       time: '10:00',
-      isMe: false,
-      avatar: aiAvatar
-    },
-    {
-      id: 2,
-      sender: USER_NAME,
-      content: '我想了解一下系统的使用方法。',
-      time: '10:01',
-      isMe: true,
-      avatar: meAvatar
-    },
-    {
-      id: 3,
-      sender: BOT_NAME,
-      content: '好的，我来为您介绍系统的主要功能。首先，您可以通过左侧菜单访问不同的功能模块...',
-      time: '10:02',
-      isMe: false,
-      avatar: aiAvatar
-    },
-    {
-      id: 4,
-      sender: USER_NAME,
-      content: '听起来很不错，能具体讲讲数据分析部分吗？',
-      time: '10:05',
-      isMe: true,
-      avatar: meAvatar
-    },
-    {
-      id: 5,
-      sender: BOT_NAME,
-      content: '当然可以。数据分析模块可以帮助您实时监控关键指标，并生成详细的报表...',
-      time: '10:06',
-      isMe: false,
-      avatar: aiAvatar
-    },
-    {
-      id: 6,
-      sender: USER_NAME,
-      content: '太好了，那我如何开始使用呢？',
-      time: '10:08',
-      isMe: true,
-      avatar: meAvatar
-    },
-    {
-      id: 7,
-      sender: BOT_NAME,
-      content: '您可以先创建一个项目，然后在项目中添加相关的数据源，系统会自动进行分析。',
-      time: '10:09',
-      isMe: false,
-      avatar: aiAvatar
-    },
-    {
-      id: 8,
-      sender: USER_NAME,
-      content: '明白了，谢谢你的帮助！',
-      time: '10:10',
-      isMe: true,
-      avatar: meAvatar
-    },
-    {
-      id: 9,
-      sender: BOT_NAME,
-      content: '不客气，有任何问题随时联系我。',
-      time: '10:11',
       isMe: false,
       avatar: aiAvatar
     }
@@ -221,12 +194,38 @@
     })
   }
 
-  // 消息处理方法
-  const sendMessage = (): void => {
-    const text = messageText.value.trim()
-    if (!text) return
+  // 加载聊天历史
+  const loadChatHistory = async (): Promise<void> => {
+    try {
+      const res = await getChatHistory(sessionId.value)
+      if (res.code === 200 && res.data && res.data.length > 0) {
+        // 将历史消息转换为 UI 格式
+        const historyMessages: ChatMessage[] = res.data.map((msg, idx) => ({
+          id: messageId.value++,
+          sender: msg.role === 'user' ? USER_NAME : BOT_NAME,
+          content: msg.content,
+          time: new Date(msg.created_at).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          isMe: msg.role === 'user',
+          avatar: msg.role === 'user' ? meAvatar : aiAvatar
+        }))
+        messages.value = historyMessages
+        scrollToBottom()
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error)
+    }
+  }
 
-    const newMessage: ChatMessage = {
+  // 发送消息
+  const sendMessage = async (): Promise<void> => {
+    const text = messageText.value.trim()
+    if (!text || isLoading.value) return
+
+    // 添加用户消息
+    const userMessage: ChatMessage = {
       id: messageId.value++,
       sender: USER_NAME,
       content: text,
@@ -234,15 +233,73 @@
       isMe: true,
       avatar: meAvatar
     }
-
-    messages.value.push(newMessage)
+    messages.value.push(userMessage)
     messageText.value = ''
     scrollToBottom()
+
+    // 开始 AI 流式响应
+    isLoading.value = true
+
+    // 添加 AI 消息占位
+    const aiMessage: ChatMessage = {
+      id: messageId.value++,
+      sender: BOT_NAME,
+      content: '',
+      time: formatCurrentTime(),
+      isMe: false,
+      avatar: aiAvatar
+    }
+    messages.value.push(aiMessage)
+    const aiMessageIndex = messages.value.length - 1
+
+    try {
+      await aiQAStream(
+        {
+          question: text,
+          user_id: USER_NAME,
+          role_type: roleType.value,
+          session_id: sessionId.value || undefined
+        },
+        (content, done) => {
+          // 更新 AI 消息内容（流式）
+          messages.value[aiMessageIndex].content += content
+          scrollToBottom()
+        },
+        (error) => {
+          messages.value[aiMessageIndex].content = `抱歉，发生了错误: ${error}`
+          scrollToBottom()
+        }
+      )
+    } finally {
+      isLoading.value = false
+      scrollToBottom()
+    }
+  }
+
+  // 文件上传处理
+  const handleFileUpload = async (uploadFile: UploadFile): Promise<void> => {
+    if (!uploadFile.raw) return
+
+    const title = prompt('请输入文档标题：', uploadFile.name || '未命名文档')
+    if (!title) return
+
+    try {
+      uploadLoading.value = true
+      await uploadKnowledge(uploadFile.raw, title, roleType.value)
+      ElMessage.success('上传成功，AI 已可以基于此文档回答问题')
+    } catch (error) {
+      ElMessage.error('上传失败，请重试')
+    } finally {
+      uploadLoading.value = false
+    }
   }
 
   // 聊天窗口控制方法
   const openChat = (): void => {
     isDrawerVisible.value = true
+    if (sessionId.value) {
+      loadChatHistory()
+    }
     scrollToBottom()
   }
 
@@ -260,3 +317,35 @@
     mittBus.off('openChat', openChat)
   })
 </script>
+
+<style scoped>
+  .typing-indicator {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  .typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: #909399;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing {
+    0%, 60%, 100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-6px);
+    }
+  }
+</style>

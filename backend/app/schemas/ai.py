@@ -57,7 +57,9 @@ class WarningResponse(BaseModel):
 
 class QARequest(BaseModel):
     question: str
-    context_type: str = "student"  # student/school/admin
+    user_id: Optional[str] = None
+    role_type: str = "student"
+    session_id: Optional[str] = None
 
 class QAResponse(BaseModel):
     status: str = "not_implemented"

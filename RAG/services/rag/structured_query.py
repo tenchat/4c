@@ -37,16 +37,15 @@ class StructuredQueryService:
         """
         query = """
             SELECT
-                college,
-                major,
-                year,
-                employment_rate,
-                avg_salary,
-                total_students,
-                employed_students
+                college_name,
+                graduation_year,
+                degree_level,
+                graduate_nums,
+                employed_nums,
+                contract_nums
             FROM college_employment
-            WHERE major LIKE :major
-            ORDER BY year DESC
+            WHERE college_name LIKE :major OR :major LIKE '%' || college_name || '%'
+            ORDER BY graduation_year DESC
             LIMIT 5
         """
         results = await self._execute(query, {"major": f"%{major}%"})
@@ -68,12 +67,11 @@ class StructuredQueryService:
                 province,
                 job_type,
                 industry,
-                demand_count,
-                avg_salary,
-                year
+                shortage_level,
+                data_year
             FROM scarce_talents
             WHERE province LIKE :province
-            ORDER BY demand_count DESC
+            ORDER BY shortage_level DESC
             LIMIT 10
         """
         results = await self._execute(query, {"province": f"%{province}%"})
@@ -92,16 +90,16 @@ class StructuredQueryService:
         """
         query = """
             SELECT
-                sp.student_name,
+                sp.student_no,
                 sp.major,
                 sp.college,
                 sp.degree,
                 sp.employment_status,
-                sp.annual_salary,
-                sp.industry,
-                sp.job_title,
-                sp.city,
-                u.university_name
+                sp.cur_salary,
+                sp.cur_industry,
+                sp.cur_company,
+                sp.cur_city,
+                u.name
             FROM student_profiles sp
             LEFT JOIN universities u ON sp.university_id = u.university_id
             WHERE sp.account_id = :account_id
@@ -126,19 +124,19 @@ class StructuredQueryService:
         query = """
             SELECT
                 jd.job_id,
-                jd.job_title,
+                jd.title,
                 jd.job_type,
-                jd.salary_min,
-                jd.salary_max,
-                jd.location,
+                jd.min_salary,
+                jd.max_salary,
+                jd.city,
                 jd.description,
-                jd.requirements,
+                jd.keywords,
                 c.company_name
             FROM job_descriptions jd
             LEFT JOIN companies c ON jd.company_id = c.company_id
             WHERE jd.industry LIKE :industry
                OR jd.description LIKE :industry
-            ORDER BY jd.created_at DESC
+            ORDER BY jd.published_at DESC
             LIMIT :limit
         """
         results = await self._execute(query, {"industry": f"%{industry}%", "limit": limit})

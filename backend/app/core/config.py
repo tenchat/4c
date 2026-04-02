@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
     CHROMA_PERSIST_DIR: str = "./chroma_db"
     DEFAULT_UNIVERSITY_ID: str = ""
+    RAG_SERVICE_URL: str = "http://localhost:1145"  # RAG 服务地址
 
     class Config:
         env_file = ".env"
