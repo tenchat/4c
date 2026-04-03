@@ -54,3 +54,19 @@ export const submitCompanyProfileForReview = (data: ProfileUpdateParams) =>
 
 export const fetchPendingProfile = () =>
   request.get<any>({ url: '/api/v1/company/profile/pending' })
+
+// 简历管理
+export interface ResumeListParams {
+  status?: number
+  page?: number
+  page_size?: number
+}
+
+export const fetchCompanyResumes = (params?: ResumeListParams) =>
+  request.get<any>({ url: '/api/v1/company/resumes', params })
+
+export const updateResumeStatus = (applicationId: string, status: number) =>
+  request.patch<any>({
+    url: `/api/v1/company/resumes/${applicationId}/status`,
+    data: { status }
+  })

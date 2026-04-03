@@ -108,7 +108,7 @@ async def get_jobs(
     service: StudentService = Depends(get_student_service)
 ):
     account_id = payload.get("sub")
-    jobs = await service.get_recommended_jobs(account_id, limit=10)
+    jobs = await service.get_recommended_jobs(account_id, limit=50)
 
     return {
         "code": 200,
@@ -122,11 +122,18 @@ async def get_jobs(
                 "industry": j.industry,
                 "min_salary": j.min_salary,
                 "max_salary": j.max_salary,
-                "status": j.status
+                "min_degree": j.min_degree,
+                "min_exp_years": j.min_exp_years,
+                "keywords": j.keywords,
+                "description": j.description,
+                "status": j.status,
+                "published_at": str(j.published_at) if j.published_at else None,
+                "expired_at": str(j.expired_at) if j.expired_at else None,
+                "company_name": getattr(j, 'company_name', None)
             } for j in jobs],
             "total": len(jobs),
             "page": 1,
-            "page_size": 10
+            "page_size": 50
         }
     }
 

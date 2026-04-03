@@ -1,10 +1,14 @@
 """
 RAG 服务配置
 
-所有敏感配置应通过环境变量设置
+所有敏感配置应通过 .env 文件设置
 """
 
 import os
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 # 文件 MD5 缓存
 md5_path = os.getenv("RAG_MD5_PATH", "./md5.text")
