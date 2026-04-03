@@ -70,12 +70,3 @@ class RagService(object):
 
         return conversation_chain
 
-if __name__ == '__main__':
-    # session id 配置
-    session_config = {
-        "configurable":{
-            "session_id": "user_001"
-        }
-    }
-    rag = RagService().chain.invoke({"input":"羽绒服怎么保养"}, session_config)
-    print(rag)
