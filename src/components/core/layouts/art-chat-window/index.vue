@@ -55,23 +55,6 @@
               </div>
             </div>
           </template>
-          <!-- AI 思考中 -->
-          <div v-if="isLoading" class="mb-7.5 flex w-full items-start gap-2">
-            <ElAvatar :size="32" :src="aiAvatar" class="shrink-0" />
-            <div class="flex max-w-[70%] flex-col items-start">
-              <div class="mb-1 flex gap-2 text-xs">
-                <span class="font-medium">{{ BOT_NAME }}</span>
-                <span class="text-g-600">{{ formatCurrentTime() }}</span>
-              </div>
-              <div class="rounded-md bg-g-300/50 px-3.5 py-2.5 text-sm leading-[1.4]">
-                <span class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- 聊天输入区域 -->
@@ -317,35 +300,3 @@
     mittBus.off('openChat', openChat)
   })
 </script>
-
-<style scoped>
-  .typing-indicator {
-    display: inline-flex;
-    gap: 4px;
-  }
-
-  .typing-indicator span {
-    width: 6px;
-    height: 6px;
-    background: #909399;
-    border-radius: 50%;
-    animation: typing 1.4s infinite;
-  }
-
-  .typing-indicator span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-
-  .typing-indicator span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-
-  @keyframes typing {
-    0%, 60%, 100% {
-      transform: translateY(0);
-    }
-    30% {
-      transform: translateY(-6px);
-    }
-  }
-</style>
