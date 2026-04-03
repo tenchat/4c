@@ -81,7 +81,9 @@
                   </template>
                 </ElUpload>
                 <ElButton :icon="Picture" circle plain />
-                <ElButton type="primary" @click="sendMessage" :disabled="isLoading" v-ripple>发送</ElButton>
+                <ElButton type="primary" @click="sendMessage" :disabled="isLoading" v-ripple
+                  >发送</ElButton
+                >
               </div>
             </template>
           </ElInput>
@@ -90,7 +92,14 @@
               <ArtSvgIcon icon="ri:image-line" class="mr-5 c-p text-g-600 text-lg" />
               <ArtSvgIcon icon="ri:emotion-happy-line" class="mr-5 c-p text-g-600 text-lg" />
             </div>
-            <ElButton type="primary" @click="sendMessage" :disabled="isLoading" v-ripple class="min-w-20">发送</ElButton>
+            <ElButton
+              type="primary"
+              @click="sendMessage"
+              :disabled="isLoading"
+              v-ripple
+              class="min-w-20"
+              >发送</ElButton
+            >
           </div>
         </div>
       </div>
@@ -183,7 +192,7 @@
       const res = await getChatHistory(sessionId.value)
       if (res.code === 200 && res.data && res.data.length > 0) {
         // 将历史消息转换为 UI 格式
-        const historyMessages: ChatMessage[] = res.data.map((msg, idx) => ({
+        const historyMessages: ChatMessage[] = res.data.map((msg) => ({
           id: messageId.value++,
           sender: msg.role === 'user' ? USER_NAME : BOT_NAME,
           content: msg.content,
@@ -197,8 +206,8 @@
         messages.value = historyMessages
         scrollToBottom()
       }
-    } catch (error) {
-      console.error('Failed to load chat history:', error)
+    } catch (_error) {
+      console.error('Failed to load chat history:', _error)
     }
   }
 
@@ -243,7 +252,7 @@
           role_type: roleType.value,
           session_id: sessionId.value || undefined
         },
-        (content, done) => {
+        (content) => {
           // 更新 AI 消息内容（流式）
           messages.value[aiMessageIndex].content += content
           scrollToBottom()
@@ -270,7 +279,7 @@
       uploadLoading.value = true
       await uploadKnowledge(uploadFile.raw, title, roleType.value)
       ElMessage.success('上传成功，AI 已可以基于此文档回答问题')
-    } catch (error) {
+    } catch {
       ElMessage.error('上传失败，请重试')
     } finally {
       uploadLoading.value = false
