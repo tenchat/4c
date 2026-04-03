@@ -20,8 +20,6 @@ logger = logging.getLogger(__name__)
 async def get_history(
     session_id: str | None = Query(None),
     user_id: str | None = Query(None),
-    offset: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ) -> BaseResponse:
     """
@@ -29,11 +27,9 @@ async def get_history(
 
     - **session_id**: 会话ID（可选）
     - **user_id**: 用户ID（可选）
-    - **offset**: 跳过的消息数量（分页用）
-    - **limit**: 返回消息数量限制
     """
     try:
-        from services.chat.db_history_service import DatabaseHistoryService
+        from services.chat.history_service import HistoryService
 
         if not session_id:
             return BaseResponse(
@@ -42,20 +38,18 @@ async def get_history(
                 data={
                     "session_id": None,
                     "messages": [],
-                    "has_more": False,
                 },
             )
 
-        history_svc = DatabaseHistoryService()
-        result = await history_svc.get_history(session_id, limit=limit, offset=offset)
+        history_svc = HistoryService()
+        messages = await history_svc.get_history(session_id)
 
         return BaseResponse(
             code=200,
             message="success",
             data={
                 "session_id": session_id,
-                "messages": result["messages"],
-                "has_more": result["has_more"],
+                "messages": messages,
             },
         )
 

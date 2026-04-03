@@ -200,8 +200,7 @@ class RAGEngine:
         # 如果是新会话且有 user_id，创建会话记录
         if session_id and user_id:
             await history_svc._get_or_create_session(session_id, user_id, role_type)
-        result = await history_svc.get_history(result_session_id)
-        history_msgs = result["messages"]
+        history_msgs = await history_svc.get_history(result_session_id)
         history = self._format_history(history_msgs)
 
         # Step 6: 构建 Prompt
@@ -294,8 +293,7 @@ class RAGEngine:
         # 如果是新会话且有 user_id，创建会话记录
         if session_id and user_id:
             await history_svc._get_or_create_session(session_id, user_id, role_type)
-        result = await history_svc.get_history(result_session_id)
-        history_msgs = result["messages"]
+        history_msgs = await history_svc.get_history(result_session_id)
         history = self._format_history(history_msgs)
 
         messages = self.prompt_builder.build(
