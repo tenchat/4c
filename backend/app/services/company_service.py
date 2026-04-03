@@ -316,3 +316,91 @@ class CompanyService:
             "pending_update": pending
         }
         return result
+
+    async def get_received_resumes(self, company_id: str, status: int = None, page: int = 1, page_size: int = 20) -> dict:
+        """获取收到的简历列表"""
+        from app.models.job import JobApplication, JobDescription
+        from app.models.student import StudentProfile
+        from app.models.account import Account
+
+        conditions = [JobDescription.company_id == company_id]
+
+        # 按岗位筛选
+        query = (
+            select(JobApplication, JobDescription, StudentProfile, Account)
+            .join(JobDescription, JobApplication.job_id == JobDescription.job_id)
+            .join(Account, JobApplication.account_id == Account.account_id)
+            .outerjoin(StudentProfile, StudentProfile.account_id == Account.account_id)
+            .where(*conditions)
+            .order_by(JobApplication.created_at.desc())
+        )
+
+        # 按状态筛选
+        if status is not None:
+            query = query.where(JobApplication.status == status)
+
+        # 查询总数
+        count_query = select(func.count()).select_from(JobApplication).join(
+            JobDescription, JobApplication.job_id == JobDescription.job_id
+        ).where(JobDescription.company_id == company_id)
+        if status is not None:
+            count_query = count_query.where(JobApplication.status == status)
+
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # 分页
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        items = []
+        for row in rows:
+            app, job, student, account = row
+            items.append({
+                "application_id": app.application_id,
+                "job_id": app.job_id,
+                "job_title": job.title if job else "",
+                "account_id": app.account_id,
+                "student_name": account.real_name if account else "",
+                "student_no": student.student_no if student else "",
+                "college": student.college if student else "",
+                "major": student.major if student else "",
+                "degree": student.degree if student else 1,
+                "graduation_year": student.graduation_year if student else None,
+                "status": app.status,
+                "applied_at": str(app.created_at)
+            })
+
+        return {
+            "list": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+
+    async def update_application_status(self, application_id: str, company_id: str, status: int) -> bool:
+        """更新简历申请状态"""
+        from app.models.job import JobApplication, JobDescription
+
+        # 验证权限
+        result = await self.db.execute(
+            select(JobApplication).where(JobApplication.application_id == application_id)
+        )
+        application = result.scalar_one_or_none()
+        if not application:
+            return False
+
+        # 验证是否属于该公司
+        job_result = await self.db.execute(
+            select(JobDescription).where(JobDescription.job_id == application.job_id)
+        )
+        job = job_result.scalar_one_or_none()
+        if not job or job.company_id != company_id:
+            raise PermissionError("无权操作")
+
+        application.status = status
+        await self.db.commit()
+        return True

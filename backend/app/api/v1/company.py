@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -384,3 +385,45 @@ async def delete_announcement(
     svc = AnnouncementService(db)
     await svc.delete_announcement(announcement_id, company_id)
     return {"code": 200, "message": "删除成功"}
+
+
+# --- 简历管理 ---
+
+@router.get("/resumes")
+async def get_received_resumes(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service),
+    status: int = Query(None, description="简历状态 0已投递 1简历筛选 2面试中 3已录用 4已拒绝"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100)
+):
+    """获取收到的简历列表"""
+    company_id = await get_company_id(db, payload.get("sub"))
+    data = await service.get_received_resumes(company_id, status, page, page_size)
+    return {"code": 200, "message": "success", "data": data}
+
+
+class ApplicationStatusUpdate(BaseModel):
+    status: int
+
+@router.patch("/resumes/{application_id}/status")
+async def update_application_status(
+    application_id: str,
+    data: ApplicationStatusUpdate,
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service)
+):
+    """更新简历状态"""
+    company_id = await get_company_id(db, payload.get("sub"))
+    try:
+        success = await service.update_application_status(application_id, company_id, data.status)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if not success:
+        raise HTTPException(status_code=404, detail="简历申请不存在")
+
+    status_map = {0: "已投递", 1: "简历筛选", 2: "面试中", 3: "已录用", 4: "已拒绝"}
+    return {"code": 200, "message": f"更新为{status_map.get(data.status, data.status)}"}

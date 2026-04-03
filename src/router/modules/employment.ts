@@ -265,6 +265,17 @@ const companyRoutes: AppRouteRecord = {
         keepAlive: true,
         roles: ['company_admin']
       }
+    },
+    {
+      path: 'resumes',
+      name: 'CompanyResumes',
+      component: '/company/resumes/index',
+      meta: {
+        title: '简历管理',
+        icon: 'ri:file-text-line',
+        keepAlive: true,
+        roles: ['company_admin']
+      }
     }
   ]
 }

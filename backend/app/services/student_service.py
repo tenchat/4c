@@ -43,19 +43,36 @@ class StudentService:
         await self.db.commit()
         return True
 
-    async def get_recommended_jobs(self, account_id: str, limit: int = 5) -> list:
+    async def get_recommended_jobs(self, account_id: str, limit: int = 50) -> list:
         # 获取学生档案
         profile = await self.get_profile(account_id)
         if not profile:
             return []
 
         # 根据学生意向城市和行业推荐岗位
-        query = select(JobDescription).where(JobDescription.status == 1)
+        from sqlalchemy import select
+        from app.models.company import Company
+
+        query = (
+            select(JobDescription, Company.company_name)
+            .outerjoin(Company, JobDescription.company_id == Company.company_id)
+            .where(JobDescription.status == 1)
+            .limit(limit)
+        )
 
         # TODO: 完善推荐逻辑（匹配城市/行业）
 
-        result = await self.db.execute(query.limit(limit))
-        return result.scalars().all()
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # 转换为包含 company_name 的结果
+        jobs = []
+        for row in rows:
+            job = row[0]
+            job.company_name = row[1] if len(row) > 1 else None
+            jobs.append(job)
+
+        return jobs
 
     async def apply_job(self, account_id: str, job_id: str) -> bool:
         # 检查是否重复投递
