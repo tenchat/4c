@@ -5,6 +5,10 @@ RAG 服务配置
 """
 
 import os
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 # 文件 MD5 缓存
 md5_path = os.getenv("RAG_MD5_PATH", "./md5.text")

@@ -106,6 +106,7 @@
   import meAvatar from '@/assets/images/avatar/avatar5.webp'
   import aiAvatar from '@/assets/images/avatar/avatar10.webp'
   import { aiQAStream, getChatHistory, uploadKnowledge } from '@/api/ai'
+  import { useUserStore } from '@/store/modules/user'
 
   defineOptions({ name: 'ArtChatWindow' })
 
@@ -123,7 +124,6 @@
   const MOBILE_BREAKPOINT = 640
   const SCROLL_DELAY = 100
   const BOT_NAME = 'Art Bot'
-  const USER_NAME = 'Ricky'
   const SESSION_KEY = 'art_chat_session_id'
 
   // 响应式布局
@@ -143,7 +143,24 @@
 
   // AI 相关状态
   const sessionId = ref<string>(localStorage.getItem(SESSION_KEY) || '')
-  const roleType = ref('student')
+  const userStore = useUserStore()
+
+  // 将后端角色映射到 RAG 角色
+  const roleMap: Record<string, string> = {
+    'student': 'student',
+    'school_admin': 'school',
+    'company_admin': 'company',
+    'system_admin': 'school'
+  }
+
+  const roleType = computed(() => {
+    const roles = userStore.info.roles || []
+    const backendRole = roles[0] || 'student'
+    return roleMap[backendRole] || 'student'
+  })
+
+  // 用户ID（用于区分不同用户的聊天历史）
+  const currentUserId = computed(() => String(userStore.info.userId || 'anonymous'))
 
   // 初始化聊天消息数据
   const initializeMessages = (): ChatMessage[] => [
@@ -185,7 +202,7 @@
         // 将历史消息转换为 UI 格式
         const historyMessages: ChatMessage[] = res.data.map((msg, idx) => ({
           id: messageId.value++,
-          sender: msg.role === 'user' ? USER_NAME : BOT_NAME,
+          sender: msg.role === 'user' ? currentUserId.value : BOT_NAME,
           content: msg.content,
           time: new Date(msg.created_at).toLocaleTimeString([], {
             hour: '2-digit',
@@ -210,7 +227,7 @@
     // 添加用户消息
     const userMessage: ChatMessage = {
       id: messageId.value++,
-      sender: USER_NAME,
+      sender: currentUserId.value,
       content: text,
       time: formatCurrentTime(),
       isMe: true,
@@ -239,7 +256,7 @@
       await aiQAStream(
         {
           question: text,
-          user_id: USER_NAME,
+          user_id: currentUserId.value,
           role_type: roleType.value,
           session_id: sessionId.value || undefined
         },
@@ -251,6 +268,11 @@
         (error) => {
           messages.value[aiMessageIndex].content = `抱歉，发生了错误: ${error}`
           scrollToBottom()
+        },
+        (newSessionId) => {
+          // 保存 session_id 到本地
+          sessionId.value = newSessionId
+          localStorage.setItem(SESSION_KEY, newSessionId)
         }
       )
     } finally {

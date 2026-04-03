@@ -44,7 +44,8 @@ export const aiQA = (data: QARequest) => {
 export const aiQAStream = async (
   data: QARequest,
   onChunk: (content: string, done: boolean) => void,
-  onError?: (error: string) => void
+  onError?: (error: string) => void,
+  onSessionId?: (sessionId: string) => void
 ): Promise<void> => {
   try {
     const userStore = useUserStore()
@@ -85,6 +86,10 @@ export const aiQAStream = async (
             const jsonStr = line.slice(6)
             if (jsonStr.trim() === '') continue
             const parsed = JSON.parse(jsonStr)
+            // 提取 session_id（仅在第一帧返回）
+            if (parsed.session_id && onSessionId) {
+              onSessionId(parsed.session_id)
+            }
             onChunk(parsed.content || '', parsed.done || false)
             if (parsed.done) return
           } catch (e) {

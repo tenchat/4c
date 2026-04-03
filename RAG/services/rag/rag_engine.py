@@ -17,7 +17,7 @@ from services.rag.context_assembler import ContextAssembler
 from services.rag.prompt_builder import PromptBuilder
 from services.llm.factory import LLMFactory
 from services.llm.base import LLMAdapter
-from services.chat.history_service import HistoryService
+from services.chat.db_history_service import DatabaseHistoryService
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,10 @@ class RAGEngine:
 
         # Step 5: 获取历史
         result_session_id = session_id or str(uuid.uuid4())
-        history_svc = HistoryService()
+        history_svc = DatabaseHistoryService()
+        # 如果是新会话且有 user_id，创建会话记录
+        if session_id and user_id:
+            await history_svc._get_or_create_session(session_id, user_id, role_type)
         history_msgs = await history_svc.get_history(result_session_id)
         history = self._format_history(history_msgs)
 
@@ -215,8 +218,8 @@ class RAGEngine:
         answer = await self.llm.chat(messages)
 
         # 存储历史
-        await history_svc.add_message(result_session_id, "user", question)
-        await history_svc.add_message(result_session_id, "assistant", answer)
+        await history_svc.add_message(result_session_id, "user", question, user_id)
+        await history_svc.add_message(result_session_id, "assistant", answer, user_id)
 
         logger.info(f"问答完成，会话ID: {result_session_id}")
 
@@ -286,7 +289,10 @@ class RAGEngine:
         knowledge_context = self.context_assembler.format_knowledge_context(docs)
 
         # 获取历史
-        history_svc = HistoryService()
+        history_svc = DatabaseHistoryService()
+        # 如果是新会话且有 user_id，创建会话记录
+        if session_id and user_id:
+            await history_svc._get_or_create_session(session_id, user_id, role_type)
         history_msgs = await history_svc.get_history(result_session_id)
         history = self._format_history(history_msgs)
 
@@ -311,7 +317,7 @@ class RAGEngine:
         yield {"content": "", "done": True}
 
         # 存储历史
-        await history_svc.add_message(result_session_id, "user", question)
-        await history_svc.add_message(result_session_id, "assistant", full_answer)
+        await history_svc.add_message(result_session_id, "user", question, user_id)
+        await history_svc.add_message(result_session_id, "assistant", full_answer, user_id)
 
         logger.info(f"流式问答完成，会话ID: {result_session_id}")
