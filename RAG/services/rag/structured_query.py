@@ -125,7 +125,6 @@ class StructuredQueryService:
             SELECT
                 jd.job_id,
                 jd.title,
-                jd.job_type,
                 jd.min_salary,
                 jd.max_salary,
                 jd.city,

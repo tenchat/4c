@@ -285,6 +285,8 @@ async def knowledge_delete(
 async def chat_history(
     session_id: str | None = None,
     user_id: str | None = None,
+    offset: int = 0,
+    limit: int = 50,
     payload: dict = Depends(get_current_user),
 ):
     """
@@ -294,7 +296,7 @@ async def chat_history(
     rag_url = settings.RAG_SERVICE_URL
 
     try:
-        params = {}
+        params = {"offset": offset, "limit": limit}
         if session_id:
             params["session_id"] = session_id
         if user_id:
@@ -309,10 +311,10 @@ async def chat_history(
             result = response.json()
 
             if result.get("code") == 200:
-                return {"code": 200, "message": "success", "data": result.get("data", [])}
+                return {"code": 200, "message": "success", "data": result.get("data", {})}
             else:
-                return {"code": 200, "message": "success", "data": []}
+                return {"code": 200, "message": "success", "data": {"messages": [], "has_more": False}}
 
     except Exception as e:
         logger.error(f"Chat history error: {e}", exc_info=True)
-        return {"code": 200, "message": "success", "data": []}
+        return {"code": 200, "message": "success", "data": {"messages": [], "has_more": False}}

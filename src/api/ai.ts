@@ -20,9 +20,9 @@ export interface QAResponse {
 }
 
 export interface ChatHistoryResponse {
-  code: number
-  message: string
-  data: ChatMessage[]
+  session_id: string
+  messages: ChatMessage[]
+  has_more: boolean
 }
 
 export interface ChatMessage {
@@ -104,10 +104,15 @@ export const aiQAStream = async (
 }
 
 // 获取聊天历史
-export const getChatHistory = (sessionId?: string, userId?: string) => {
+export const getChatHistory = (
+  sessionId?: string,
+  userId?: string,
+  offset: number = 0,
+  limit: number = 30
+) => {
   return request.get<ChatHistoryResponse>({
-    url: '/v1/ai/chat/history',
-    params: { session_id: sessionId, user_id: userId }
+    url: '/api/v1/ai/chat/history',
+    params: { session_id: sessionId, user_id: userId, offset, limit }
   })
 }
 

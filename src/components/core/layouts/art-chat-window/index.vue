@@ -24,8 +24,22 @@
         <div
           class="flex-1 overflow-y-auto border-t-d px-4 py-7.5 [&::-webkit-scrollbar]:!w-1"
           ref="messageContainer"
+          @scroll="handleScroll"
         >
+          <!-- 加载更多指示器 -->
+          <div v-if="isLoadingMore" class="text-center py-2 text-xs text-g-400">
+            加载更多...
+          </div>
+
           <template v-for="(message, index) in messages" :key="index">
+            <!-- 时间分隔符 -->
+            <div
+              v-if="message.timeSeparator && (index === 0 || messages[index - 1].timeSeparator !== message.timeSeparator)"
+              class="flex items-center justify-center my-4 text-xs text-g-400"
+            >
+              <span class="px-2">{{ message.timeSeparator }}</span>
+            </div>
+
             <div
               :class="[
                 'mb-7.5 flex w-full items-start gap-2',
@@ -36,15 +50,7 @@
               <div
                 :class="['flex max-w-[70%] flex-col', message.isMe ? 'items-end' : 'items-start']"
               >
-                <div
-                  :class="[
-                    'mb-1 flex gap-2 text-xs',
-                    message.isMe ? 'flex-row-reverse' : 'flex-row'
-                  ]"
-                >
-                  <span class="font-medium">{{ message.sender }}</span>
-                  <span class="text-g-600">{{ message.time }}</span>
-                </div>
+                <div class="mb-1 text-xs text-g-400">{{ message.time }}</div>
                 <div
                   :class="[
                     'rounded-md px-3.5 py-2.5 text-sm leading-[1.4] text-g-900',
@@ -124,7 +130,9 @@
     id: number
     sender: string
     content: string
-    time: string
+    time: string          // 显示用：当天 "HH:mm"，更早显示 ""
+    fullTime: string       // ISO 时间戳，用于日期比较
+    timeSeparator: string  // 时间分隔符文本，如 "昨天"、"4月2日"
     isMe: boolean
     avatar: string
   }
@@ -134,6 +142,7 @@
   const SCROLL_DELAY = 100
   const BOT_NAME = 'Art Bot'
   const SESSION_KEY = 'art_chat_session_id'
+  const HISTORY_LIMIT = 30
 
   // 响应式布局
   const { width } = useWindowSize()
@@ -154,6 +163,11 @@
   const sessionId = ref<string>(localStorage.getItem(SESSION_KEY) || '')
   const userStore = useUserStore()
 
+  // 分页状态
+  const historyOffset = ref(0)
+  const hasMoreHistory = ref(true)
+  const isLoadingMore = ref(false)
+
   // 将后端角色映射到 RAG 角色
   const roleMap: Record<string, string> = {
     student: 'student',
@@ -171,27 +185,65 @@
   // 用户ID（用于区分不同用户的聊天历史）
   const currentUserId = computed(() => String(userStore.info.userId || 'anonymous'))
 
-  // 初始化聊天消息数据
-  const initializeMessages = (): ChatMessage[] => [
-    {
-      id: 1,
-      sender: BOT_NAME,
-      content: '你好！我是你的AI助手，有什么我可以帮你的吗？',
-      time: '10:00',
-      isMe: false,
-      avatar: aiAvatar
-    }
-  ]
-
-  const messages = ref<ChatMessage[]>(initializeMessages())
-
   // 工具函数
+  const isSameDay = (d1: Date, d2: Date): boolean => {
+    return (
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate()
+    )
+  }
+
+  const isToday = (date: Date): boolean => {
+    return isSameDay(date, new Date())
+  }
+
+  const isYesterday = (date: Date): boolean => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    return isSameDay(date, yesterday)
+  }
+
+  const formatTimeSeparator = (dateStr: string): string => {
+    const date = new Date(dateStr)
+    if (isToday(date)) return ''
+    if (isYesterday(date)) return '昨天'
+    return `${date.getMonth() + 1}月${date.getDate()}日`
+  }
+
+  const formatMessageTime = (dateStr: string): string => {
+    const date = new Date(dateStr)
+    if (isToday(date)) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
   const formatCurrentTime = (): string => {
     return new Date().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit'
     })
   }
+
+  // 初始化聊天消息数据
+  const initializeMessages = (): ChatMessage[] => {
+    const now = new Date()
+    return [
+      {
+        id: 1,
+        sender: BOT_NAME,
+        content: '你好！我是你的AI助手，有什么我可以帮你的吗？',
+        time: formatMessageTime(now.toISOString()),
+        fullTime: now.toISOString(),
+        timeSeparator: '',
+        isMe: false,
+        avatar: aiAvatar
+      }
+    ]
+  }
+
+  const messages = ref<ChatMessage[]>(initializeMessages())
 
   const scrollToBottom = (): void => {
     nextTick(() => {
@@ -204,24 +256,39 @@
   }
 
   // 加载聊天历史
-  const loadChatHistory = async (): Promise<void> => {
+  const loadChatHistory = async (append: boolean = false): Promise<void> => {
     try {
-      const res = await getChatHistory(sessionId.value)
-      if (res.code === 200 && res.data && res.data.length > 0) {
-        // 将历史消息转换为 UI 格式
-        const historyMessages: ChatMessage[] = res.data.map((msg) => ({
+      const res = await getChatHistory(sessionId.value, undefined, append ? historyOffset.value : 0, HISTORY_LIMIT)
+      if (res && res.messages) {
+        const historyMessages: ChatMessage[] = res.messages.map((msg: any) => ({
           id: messageId.value++,
-          sender: msg.role === 'user' ? currentUserId.value : BOT_NAME,
+          sender: msg.type === 'user' ? currentUserId.value : BOT_NAME,
           content: msg.content,
-          time: new Date(msg.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          isMe: msg.role === 'user',
-          avatar: msg.role === 'user' ? meAvatar : aiAvatar
+          time: formatMessageTime(msg.created_at),
+          fullTime: msg.created_at,
+          timeSeparator: formatTimeSeparator(msg.created_at),
+          isMe: msg.type === 'user',
+          avatar: msg.type === 'user' ? meAvatar : aiAvatar
         }))
-        messages.value = historyMessages
-        scrollToBottom()
+
+        if (append) {
+          // 预加载更多 - 保留滚动位置
+          const oldScrollHeight = messageContainer.value?.scrollHeight || 0
+          messages.value = [...historyMessages, ...messages.value]
+          historyOffset.value += historyMessages.length
+          // 恢复滚动位置
+          nextTick(() => {
+            if (messageContainer.value) {
+              messageContainer.value.scrollTop = messageContainer.value.scrollHeight - oldScrollHeight
+            }
+          })
+        } else {
+          messages.value = historyMessages
+          scrollToBottom()
+          historyOffset.value = historyMessages.length
+        }
+
+        hasMoreHistory.value = res.has_more ?? false
       }
     } catch (_error) {
       console.error('Failed to load chat history:', _error)
@@ -234,11 +301,14 @@
     if (!text || isLoading.value) return
 
     // 添加用户消息
+    const now = new Date()
     const userMessage: ChatMessage = {
       id: messageId.value++,
       sender: currentUserId.value,
       content: text,
       time: formatCurrentTime(),
+      fullTime: now.toISOString(),
+      timeSeparator: formatTimeSeparator(now.toISOString()),
       isMe: true,
       avatar: meAvatar
     }
@@ -255,6 +325,8 @@
       sender: BOT_NAME,
       content: '',
       time: formatCurrentTime(),
+      fullTime: now.toISOString(),
+      timeSeparator: formatTimeSeparator(now.toISOString()),
       isMe: false,
       avatar: aiAvatar
     }
@@ -311,10 +383,27 @@
   // 聊天窗口控制方法
   const openChat = (): void => {
     isDrawerVisible.value = true
+    // 重置分页状态
+    historyOffset.value = 0
+    hasMoreHistory.value = true
     if (sessionId.value) {
       loadChatHistory()
     }
     scrollToBottom()
+  }
+
+  // 滚动加载更多历史
+  const handleScroll = async (): Promise<void> => {
+    if (!messageContainer.value || isLoadingMore.value || !hasMoreHistory.value) return
+
+    const { scrollTop } = messageContainer.value
+
+    // 当滚动到顶部附近时加载更多
+    if (scrollTop < 100 && hasMoreHistory.value) {
+      isLoadingMore.value = true
+      await loadChatHistory(true)
+      isLoadingMore.value = false
+    }
   }
 
   const closeChat = (): void => {

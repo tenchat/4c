@@ -187,35 +187,48 @@ class DatabaseHistoryService:
         self,
         session_id: str,
         limit: int = 50,
-    ) -> list[dict]:
+        offset: int = 0,
+    ) -> dict:
         """
         获取会话历史
 
         Args:
             session_id: 会话ID
             limit: 返回消息数量限制
+            offset: 跳过的消息数量
 
         Returns:
-            消息列表
+            dict with 'messages' list and 'has_more' bool
         """
         await self._ensure_tables()
 
         from sqlalchemy import text
 
         async with AsyncSessionLocal() as session:
+            # 获取总数
+            count_result = await session.execute(
+                text("""
+                    SELECT COUNT(*) FROM chat_messages
+                    WHERE session_id = :session_id
+                """),
+                {"session_id": session_id}
+            )
+            total_count = count_result.scalar_one()
+
+            # 获取分页消息
             result = await session.execute(
                 text("""
                     SELECT message_id, message_type, content, created_at
                     FROM chat_messages
                     WHERE session_id = :session_id
                     ORDER BY created_at ASC
-                    LIMIT :limit
+                    LIMIT :limit OFFSET :offset
                 """),
-                {"session_id": session_id, "limit": limit}
+                {"session_id": session_id, "limit": limit, "offset": offset}
             )
 
             rows = result.fetchall()
-            return [
+            messages = [
                 {
                     "type": row[1],  # message_type
                     "content": row[2],  # content
@@ -223,6 +236,12 @@ class DatabaseHistoryService:
                 }
                 for row in rows
             ]
+
+            return {
+                "messages": messages,
+                "has_more": (offset + len(messages)) < total_count if messages else False,
+                "total": total_count,
+            }
 
     async def get_user_sessions(self, user_id: str, limit: int = 10) -> list[dict]:
         """
