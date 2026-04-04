@@ -29,7 +29,7 @@ async def get_history(
     - **user_id**: 用户ID（可选）
     """
     try:
-        from services.chat.history_service import HistoryService
+        from services.chat.db_history_service import DatabaseHistoryService
 
         if not session_id:
             return BaseResponse(
@@ -41,7 +41,7 @@ async def get_history(
                 },
             )
 
-        history_svc = HistoryService()
+        history_svc = DatabaseHistoryService()
         messages = await history_svc.get_history(session_id)
 
         return BaseResponse(
@@ -69,9 +69,9 @@ async def delete_history(
     - **session_id**: 要删除的会话ID
     """
     try:
-        from services.chat.history_service import HistoryService
+        from services.chat.db_history_service import DatabaseHistoryService
 
-        history_svc = HistoryService()
+        history_svc = DatabaseHistoryService()
         success = await history_svc.delete_history(session_id)
 
         if not success:

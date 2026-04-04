@@ -26,6 +26,15 @@
           ref="messageContainer"
         >
           <template v-for="(message, index) in messages" :key="index">
+            <!-- 时间分隔线 -->
+            <div
+              v-if="message.timeSeparator"
+              class="my-4 flex items-center gap-2"
+            >
+              <div class="h-px flex-1 bg-g-200"></div>
+              <span class="text-xs text-g-500">{{ message.timeSeparator }}</span>
+              <div class="h-px flex-1 bg-g-200"></div>
+            </div>
             <div
               :class="[
                 'mb-7.5 flex w-full items-start gap-2',
@@ -125,6 +134,8 @@
     sender: string
     content: string
     time: string
+    fullTime?: string
+    timeSeparator?: string
     isMe: boolean
     avatar: string
   }
@@ -193,6 +204,49 @@
     })
   }
 
+  // 日期判断工具函数
+  const isSameDay = (date1: Date, date2: Date): boolean => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    )
+  }
+
+  const isToday = (date: Date): boolean => {
+    return isSameDay(date, new Date())
+  }
+
+  const isYesterday = (date: Date): boolean => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    return isSameDay(date, yesterday)
+  }
+
+  // 格式化时间分隔符
+  const formatTimeSeparator = (dateStr: string): string => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    if (isToday(date)) return ''
+    if (isYesterday(date)) return '昨天'
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${month}月${day}日`
+  }
+
+  // 格式化消息时间
+  const formatMessageTime = (dateStr: string): string => {
+    if (!dateStr) return formatCurrentTime()
+    const date = new Date(dateStr)
+    if (isToday(date)) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return `${month}月${day}日 ${time}`
+  }
+
   const scrollToBottom = (): void => {
     nextTick(() => {
       setTimeout(() => {
@@ -207,19 +261,25 @@
   const loadChatHistory = async (): Promise<void> => {
     try {
       const res = await getChatHistory(sessionId.value)
-      if (res.code === 200 && res.data && res.data.length > 0) {
+      // HTTP 工具已解包，res 格式为 {session_id, messages, has_more}
+      if (res && res.messages && res.messages.length > 0) {
         // 将历史消息转换为 UI 格式
-        const historyMessages: ChatMessage[] = res.data.map((msg) => ({
-          id: messageId.value++,
-          sender: msg.role === 'user' ? currentUserId.value : BOT_NAME,
-          content: msg.content,
-          time: new Date(msg.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          isMe: msg.role === 'user',
-          avatar: msg.role === 'user' ? meAvatar : aiAvatar
-        }))
+        let lastDate = ''
+        const historyMessages: ChatMessage[] = res.messages.map((msg: any) => {
+          const separator = formatTimeSeparator(msg.created_at)
+          const time = formatMessageTime(msg.created_at)
+          lastDate = separator || lastDate
+          return {
+            id: messageId.value++,
+            sender: msg.type === 'user' ? currentUserId.value : BOT_NAME,
+            content: msg.content,
+            time: time,
+            fullTime: msg.created_at,
+            timeSeparator: separator !== lastDate ? separator : '',
+            isMe: msg.type === 'user',
+            avatar: msg.type === 'user' ? meAvatar : aiAvatar
+          }
+        })
         messages.value = historyMessages
         scrollToBottom()
       }
@@ -309,10 +369,64 @@
   }
 
   // 聊天窗口控制方法
-  const openChat = (): void => {
+  const LAST_CHAT_DATE_KEY = 'art_chat_last_date'
+
+  const checkAndGreetIfNewDay = (): void => {
+    const today = new Date()
+    const todayStr = today.toDateString()
+
+    // 检查最后一条消息是否是今天的
+    const lastMessage = messages.value[messages.value.length - 1]
+    let lastMessageDate: Date | null = null
+
+    if (lastMessage?.fullTime) {
+      lastMessageDate = new Date(lastMessage.fullTime)
+    }
+
+    // 如果有最后消息且是今天的，不需要打招呼
+    if (lastMessageDate && isToday(lastMessageDate)) {
+      localStorage.setItem(LAST_CHAT_DATE_KEY, todayStr)
+      return
+    }
+
+    // 如果没有消息，或者最后消息不是今天的，且是跨天了
+    const lastDate = localStorage.getItem(LAST_CHAT_DATE_KEY)
+    if (lastDate && lastDate !== todayStr) {
+      // 新的一天，打开聊天框时 AI 主动打招呼
+      const hour = today.getHours()
+      let greeting = ''
+      if (hour < 12) {
+        greeting = '早上好！新的一天开始了，有什么我可以帮你的吗？'
+      } else if (hour < 18) {
+        greeting = '下午好！有什么我可以帮你的吗？'
+      } else {
+        greeting = '晚上好！新的一天有什么我可以帮你的吗？'
+      }
+
+      const greetingMessage: ChatMessage = {
+        id: messageId.value++,
+        sender: BOT_NAME,
+        content: greeting,
+        time: formatCurrentTime(),
+        isMe: false,
+        avatar: aiAvatar
+      }
+      messages.value.unshift(greetingMessage)
+      nextTick(() => scrollToBottom())
+    }
+
+    // 更新最后聊天日期
+    localStorage.setItem(LAST_CHAT_DATE_KEY, todayStr)
+  }
+
+  const openChat = async (): Promise<void> => {
     isDrawerVisible.value = true
     if (sessionId.value) {
-      loadChatHistory()
+      await loadChatHistory()
+      checkAndGreetIfNewDay()
+    } else {
+      // 没有 sessionId 时也检查是否新的一天
+      checkAndGreetIfNewDay()
     }
     scrollToBottom()
   }
