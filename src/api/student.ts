@@ -25,3 +25,17 @@ export const fetchStudentJobs = (params: JobListParams) =>
 
 export const applyForJob = (jobId: string) =>
   request.post<any>({ url: `/api/v1/student/jobs/${jobId}/apply` })
+
+export const uploadResume = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post<any>({
+    url: '/api/v1/student/resume/upload',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+export const downloadResume = (filename: string) => {
+  return `/api/v1/student/resumes/${filename}`
+}

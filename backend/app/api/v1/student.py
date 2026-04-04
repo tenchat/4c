@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.services.student_service import StudentService
+from app.services.file_service import save_resume_file, get_resume_path, delete_resume_file
+from app.utils.text_extractor import extract_text
 
 router = APIRouter()
 
@@ -82,6 +85,7 @@ async def get_profile(
             "cur_industry": profile.cur_industry,
             "cur_salary": profile.cur_salary,
             "resume_url": profile.resume_url,
+            "resume_text": profile.resume_text,
             "profile_complete": profile.profile_complete,
         }
     }
@@ -151,3 +155,70 @@ async def apply_job(
         raise HTTPException(status_code=400, detail="已投递过该岗位")
 
     return {"code": 200, "message": "投递成功"}
+
+
+@router.post("/resume/upload")
+async def upload_resume(
+    file: UploadFile = File(...),
+    payload: dict = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service),
+    db: AsyncSession = Depends(get_db)
+):
+    """上传简历文件，提取文本内容并保存."""
+    account_id = payload.get("sub")
+
+    # Read file content
+    file_content = await file.read()
+
+    # Save file and extract text
+    success, stored_filename, error = await save_resume_file(file_content, file.filename or "resume", account_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=error)
+
+    # Extract text from file
+    resume_text = extract_text(file.filename or "resume.pdf", file_content)
+
+    # Update student profile with resume URL and text
+    from app.models.student import StudentProfile
+    from sqlalchemy import select, update
+
+    result = await db.execute(
+        select(StudentProfile).where(StudentProfile.account_id == account_id)
+    )
+    profile = result.scalar_one_or_none()
+
+    if profile:
+        # Delete old resume file if exists
+        if profile.resume_url:
+            delete_resume_file(profile.resume_url)
+        # Update with new resume info
+        profile.resume_url = stored_filename
+        if hasattr(profile, 'resume_text'):
+            profile.resume_text = resume_text
+        await db.commit()
+
+    return {
+        "code": 200,
+        "message": "简历上传成功",
+        "data": {
+            "resume_url": stored_filename,
+            "resume_text": resume_text[:500] + "..." if len(resume_text) > 500 else resume_text
+        }
+    }
+
+
+@router.get("/resumes/{filename}")
+async def download_resume(
+    filename: str,
+    payload: dict = Depends(get_current_user)
+):
+    """下载简历文件."""
+    file_path = get_resume_path(filename)
+    if not file_path:
+        raise HTTPException(status_code=404, detail="简历文件不存在")
+
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
