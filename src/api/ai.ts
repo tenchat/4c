@@ -20,9 +20,9 @@ export interface QAResponse {
 }
 
 export interface ChatHistoryResponse {
-  session_id: string
-  messages: ChatMessage[]
-  has_more: boolean
+  code: number
+  message: string
+  data: ChatMessage[]
 }
 
 export interface ChatMessage {
@@ -44,8 +44,7 @@ export const aiQA = (data: QARequest) => {
 export const aiQAStream = async (
   data: QARequest,
   onChunk: (content: string, done: boolean) => void,
-  onError?: (error: string) => void,
-  onSessionId?: (sessionId: string) => void
+  onError?: (error: string) => void
 ): Promise<void> => {
   try {
     const userStore = useUserStore()
@@ -86,10 +85,6 @@ export const aiQAStream = async (
             const jsonStr = line.slice(6)
             if (jsonStr.trim() === '') continue
             const parsed = JSON.parse(jsonStr)
-            // 提取 session_id（仅在第一帧返回）
-            if (parsed.session_id && onSessionId) {
-              onSessionId(parsed.session_id)
-            }
             onChunk(parsed.content || '', parsed.done || false)
             if (parsed.done) return
           } catch (e) {
@@ -106,7 +101,7 @@ export const aiQAStream = async (
 // 获取聊天历史
 export const getChatHistory = (sessionId?: string, userId?: string) => {
   return request.get<ChatHistoryResponse>({
-    url: '/api/v1/ai/chat/history',
+    url: '/v1/ai/chat/history',
     params: { session_id: sessionId, user_id: userId }
   })
 }

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -87,6 +88,7 @@ async def get_profile(
             "cur_industry": profile.cur_industry,
             "cur_salary": profile.cur_salary,
             "resume_url": profile.resume_url,
+            "resume_text": profile.resume_text,
             "profile_complete": profile.profile_complete,
         }
     }
@@ -170,31 +172,3 @@ async def apply_job(
         raise HTTPException(status_code=400, detail="已投递过该岗位")
 
     return {"code": 200, "message": "投递成功"}
-
-
-@router.get("/job/recommend")
-async def recommend_jobs(
-    top_k: int = 6,
-    payload: dict = Depends(get_current_user),
-    rag_svc=Depends(get_rag_svc),
-):
-    """
-    获取 AI 智能推荐的岗位
-
-    - **top_k**: 推荐数量，默认6条
-    """
-    account_id = payload.get("sub")
-
-    try:
-        result = await rag_svc.recommend_jobs(account_id, top_k)
-        return {
-            "code": 200,
-            "message": "success",
-            "data": result,
-        }
-    except Exception as e:
-        return {
-            "code": 500,
-            "message": f"推荐服务异常: {str(e)}",
-            "data": {"recommendations": []},
-        }

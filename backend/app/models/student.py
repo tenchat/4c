@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, DECIMAL, ForeignKey, JSON, Index
+from sqlalchemy import Column, String, Integer, DateTime, DECIMAL, ForeignKey, JSON, Index, Text
 from app.models.base import Base, TimestampMixin
 
 class StudentProfile(Base, TimestampMixin):
@@ -30,4 +30,5 @@ class StudentProfile(Base, TimestampMixin):
     cur_industry = Column(String(100))
     cur_salary = Column(Integer)
     resume_url = Column(String(255))
+    resume_text = Column(Text)  # 简历提取的文本内容
     profile_complete = Column(Integer, default=0)  # 档案完整度 0-100
