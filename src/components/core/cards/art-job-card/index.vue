@@ -167,7 +167,7 @@
 
   // 获取标签类型
   const getTagType = (index: number) => {
-    const types = ['', 'success', 'warning', 'info']
+    const types = ['primary', 'success', 'warning', 'info']
     return types[index % types.length] as any
   }
 

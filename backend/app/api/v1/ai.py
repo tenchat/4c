@@ -23,6 +23,7 @@ from app.core.config import get_settings
 from app.schemas.ai import (
     EmploymentProfileRequest,
     ResumeAnalysisRequest,
+    ResumeOptimizeRequest,
     DecisionRequest,
     WarningRequest,
     QARequest,
@@ -316,3 +317,125 @@ async def chat_history(
     except Exception as e:
         logger.error(f"Chat history error: {e}", exc_info=True)
         return {"code": 200, "message": "success", "data": []}
+
+
+@router.post("/resume/optimize")
+async def resume_optimize(
+    req: ResumeOptimizeRequest,
+    payload: dict = Depends(get_current_user),
+    service: AIService = Depends(get_ai_service)
+):
+    """
+    AI 简历优化
+
+    根据学生画像和目标岗位，优化简历内容并给出修改建议
+    """
+    account_id = payload.get("sub")
+
+    result = await service.optimize_resume(account_id, req.resume_text, req.target_job)
+
+    if result.get("status") == "success":
+        return {"code": 200, "message": "success", "data": result.get("data")}
+    else:
+        return {"code": 500, "message": result.get("message", "优化失败"), "data": None}
+
+
+@router.post("/resume/export-pdf")
+async def export_resume_pdf(
+    req: ResumeOptimizeRequest,
+    payload: dict = Depends(get_current_user),
+):
+    """
+    导出简历为 PDF
+
+    将 Markdown 格式的简历文本导出为 PDF 文件
+    """
+    from fastapi.responses import Response
+    from app.services.resume_export import export_resume_to_pdf
+
+    try:
+        pdf_data = export_resume_to_pdf(req.resume_text, "optimized_resume.pdf")
+
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=optimized_resume.pdf"
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF export error: {e}", exc_info=True)
+        # 返回错误信息作为 JSON，而不是抛出异常（否则 axios blob 会解析失败）
+        return JSONResponse(
+            status_code=500,
+            content={"code": 500, "message": f"PDF 导出失败: {str(e)}", "data": None}
+        )
+
+
+@router.post("/resume/parse-file")
+async def parse_resume_file(
+    file: UploadFile = File(...),
+    payload: dict = Depends(get_current_user),
+):
+    """
+    解析简历文档（文件上传方式）
+
+    上传 PDF、Word 文件，返回解析后的文本内容
+    """
+    import tempfile
+    import os
+    from fastapi import UploadFile, File, HTTPException
+
+    settings = get_rag_settings()
+    rag_url = settings.RAG_SERVICE_URL
+
+    try:
+        # 检查文件类型
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        allowed_exts = {".pdf", ".docx", ".doc", ".txt"}
+        if ext not in allowed_exts:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的格式: {ext}。支持的格式: {', '.join(allowed_exts)}"
+            )
+
+        # 读取文件内容
+        content = await file.read()
+
+        # 检查文件大小 (10MB)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="文件超过 10MB 限制")
+
+        # 保存到临时文件
+        temp_dir = tempfile.gettempdir()
+        temp_filename = f"resume_upload_{os.getpid()}{ext}"
+        temp_path = os.path.join(temp_dir, temp_filename)
+
+        with open(temp_path, "wb") as f:
+            f.write(content)
+
+        try:
+            # 调用 RAG 服务解析
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                with open(temp_path, "rb") as f:
+                    files = {"file": (file.filename or "resume", f)}
+                    response = await client.post(
+                        f"{rag_url}/rag/resume/parse",
+                        files=files
+                    )
+                response.raise_for_status()
+                result = response.json()
+
+                if result.get("code") == 200:
+                    return {"code": 200, "message": "success", "data": result.get("data")}
+                else:
+                    raise HTTPException(status_code=500, detail=result.get("message", "解析失败"))
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"简历解析失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"解析失败: {str(e)}")

@@ -3,12 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.services.student_service import StudentService
+from app.services.rag.rag_service import get_rag_service
 
 router = APIRouter()
 
 
 def get_student_service(db: AsyncSession = Depends(get_db)) -> StudentService:
     return StudentService(db)
+
+
+def get_rag_svc():
+    return get_rag_service()
 
 
 @router.get("/dashboard")
@@ -104,11 +109,25 @@ async def update_profile(
 
 @router.get("/jobs")
 async def get_jobs(
+    keyword: str = "",
+    city: str = "",
+    industry: str = "",
+    min_salary: int = 0,
+    max_salary: int = 0,
+    page: int = 1,
+    page_size: int = 50,
     payload: dict = Depends(get_current_user),
     service: StudentService = Depends(get_student_service)
 ):
-    account_id = payload.get("sub")
-    jobs = await service.get_recommended_jobs(account_id, limit=50)
+    jobs, total = await service.get_jobs_with_filters(
+        keyword=keyword,
+        city=city,
+        industry=industry,
+        min_salary=min_salary,
+        max_salary=max_salary,
+        page=page,
+        page_size=page_size
+    )
 
     return {
         "code": 200,
@@ -131,9 +150,9 @@ async def get_jobs(
                 "expired_at": str(j.expired_at) if j.expired_at else None,
                 "company_name": getattr(j, 'company_name', None)
             } for j in jobs],
-            "total": len(jobs),
-            "page": 1,
-            "page_size": 50
+            "total": total,
+            "page": page,
+            "page_size": page_size
         }
     }
 
@@ -151,3 +170,31 @@ async def apply_job(
         raise HTTPException(status_code=400, detail="已投递过该岗位")
 
     return {"code": 200, "message": "投递成功"}
+
+
+@router.get("/job/recommend")
+async def recommend_jobs(
+    top_k: int = 6,
+    payload: dict = Depends(get_current_user),
+    rag_svc=Depends(get_rag_svc),
+):
+    """
+    获取 AI 智能推荐的岗位
+
+    - **top_k**: 推荐数量，默认6条
+    """
+    account_id = payload.get("sub")
+
+    try:
+        result = await rag_svc.recommend_jobs(account_id, top_k)
+        return {
+            "code": 200,
+            "message": "success",
+            "data": result,
+        }
+    except Exception as e:
+        return {
+            "code": 500,
+            "message": f"推荐服务异常: {str(e)}",
+            "data": {"recommendations": []},
+        }

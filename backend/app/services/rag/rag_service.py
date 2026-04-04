@@ -293,6 +293,63 @@ class RAGService:
         except Exception:
             return False
 
+    async def recommend_jobs(
+        self,
+        user_id: str,
+        top_k: int = 5,
+    ) -> dict:
+        """
+        获取岗位推荐
+
+        Args:
+            user_id: 学生账户ID
+            top_k: 推荐数量
+
+        Returns:
+            推荐结果
+        """
+        payload = {
+            "user_id": user_id,
+            "top_k": top_k,
+        }
+
+        result = await self._post("/rag/job/recommend", payload)
+
+        if result.get("code") == 200:
+            return result.get("data", {})
+
+        raise RAGServiceError(result.get("message", "推荐服务异常"), 500)
+
+    async def optimize_resume(
+        self,
+        account_id: str,
+        resume_text: str,
+        target_job: str,
+    ) -> dict:
+        """
+        AI 简历优化
+
+        Args:
+            account_id: 学生账户ID
+            resume_text: 简历文本
+            target_job: 目标岗位
+
+        Returns:
+            优化结果
+        """
+        payload = {
+            "user_id": account_id,
+            "resume_text": resume_text,
+            "target_job": target_job,
+        }
+
+        result = await self._post("/rag/resume/optimize", payload)
+
+        if result.get("code") == 200:
+            return result.get("data", {})
+
+        raise RAGServiceError(result.get("message", "简历优化服务异常"), 500)
+
 
 # 全局单例
 _rag_service: RAGService | None = None

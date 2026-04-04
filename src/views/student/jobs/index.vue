@@ -112,6 +112,10 @@
             <ElIcon><RefreshLeft /></ElIcon>
             重置
           </ElButton>
+          <ElButton type="success" @click="handleAIRecommend">
+            <ElIcon><MagicStick /></ElIcon>
+            AI智能推荐
+          </ElButton>
         </div>
       </div>
     </ElCard>
@@ -322,11 +326,91 @@
         </div>
       </template>
     </ElDrawer>
+
+    <!-- AI智能推荐弹窗 -->
+    <ElDialog v-model="recommendDialogVisible" title="AI智能推荐" width="720px" :close-on-click-modal="false">
+      <template #header>
+        <span>AI智能推荐</span>
+        <el-link type="primary" class="rules-link" @click="showRulesDialog = true">推荐规则</el-link>
+      </template>
+      <div v-loading="recommendLoading">
+        <ElEmpty v-if="!recommendations.length" description="暂未找到合适的推荐，请先完善您的简历信息" />
+        <div v-else class="recommend-list">
+          <div v-for="item in recommendations" :key="item.job_id" class="recommend-card">
+            <div class="recommend-header">
+              <h4 class="recommend-title">{{ item.title }}</h4>
+              <ElTag type="success">{{ (item.match_score * 100).toFixed(0) }}% 匹配</ElTag>
+            </div>
+            <p class="recommend-company">
+              <ElIcon><OfficeBuilding /></ElIcon>
+              {{ item.company_name }}
+            </p>
+            <p class="recommend-meta">
+              <ElIcon><Location /></ElIcon>
+              {{ item.city }}
+              <span class="salary-range">{{ item.min_salary }}-{{ item.max_salary }}元/月</span>
+            </p>
+            <div class="recommend-reason" v-if="item.description">
+              <p class="reason-label">推荐理由：</p>
+              <p class="reason-text">{{ item.description.substring(0, 100) }}{{ item.description.length > 100 ? '...' : '' }}</p>
+            </div>
+            <div class="recommend-actions">
+              <ElButton size="small" type="primary" @click="handleViewRecommendJob(item)">查看详情</ElButton>
+              <ElButton size="small" @click="handleApply(item as any)">投递简历</ElButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ElDialog>
+
+    <!-- 推荐规则说明弹窗 -->
+    <ElDialog v-model="showRulesDialog" title="推荐规则说明" width="500px">
+      <div class="rules-content">
+        <p class="rules-title">匹配度计算方式</p>
+        <p class="rules-formula">匹配度 = (向量相似度分 + 规则匹配分) ÷ 2</p>
+
+        <div class="rules-detail">
+          <div class="rule-item">
+            <span class="rule-icon">🔍</span>
+            <div class="rule-info">
+              <span class="rule-name">向量相似度 (50%)</span>
+              <span class="rule-desc">基于您的简历信息（专业、技能、期望城市等）与岗位描述的语义匹配程度</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">📍</span>
+            <div class="rule-info">
+              <span class="rule-name">城市匹配 (+20%)</span>
+              <span class="rule-desc">您的期望城市与岗位所在城市匹配时加分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">💼</span>
+            <div class="rule-info">
+              <span class="rule-name">行业匹配 (+20%)</span>
+              <span class="rule-desc">您的期望行业与岗位所属行业匹配时加分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">💰</span>
+            <div class="rule-info">
+              <span class="rule-name">薪资匹配 (+10%)</span>
+              <span class="rule-desc">岗位薪资符合您的期望薪资范围时加分</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="rules-tip">建议：完善您的简历信息（专业、期望城市、期望行业、期望薪资等）可获得更精准的推荐结果</p>
+      </div>
+    </ElDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { fetchStudentJobs, applyForJob } from '@/api/student'
+  import { fetchStudentJobs, applyForJob, getJobRecommendations, type JobRecommendation } from '@/api/student'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import {
     Search,
@@ -343,7 +427,8 @@
     Collection,
     Reading,
     Clock,
-    Position
+    Position,
+    MagicStick
   } from '@element-plus/icons-vue'
   import ArtJobCard from '@/components/core/cards/art-job-card/index.vue'
 
@@ -394,6 +479,11 @@
 
   const drawerVisible = ref(false)
   const currentJob = ref<JobItem | null>(null)
+
+  const recommendDialogVisible = ref(false)
+  const recommendations = ref<JobRecommendation[]>([])
+  const recommendLoading = ref(false)
+  const showRulesDialog = ref(false)
 
   const INDUSTRY_OPTIONS = [
     { label: '互联网/IT', value: 'internet' },
@@ -562,6 +652,41 @@
     if (currentJob.value) {
       handleApply(currentJob.value)
     }
+  }
+
+  const handleAIRecommend = async () => {
+    recommendDialogVisible.value = true
+    recommendLoading.value = true
+    try {
+      const res: any = await getJobRecommendations(6)
+      recommendations.value = res?.recommendations || []
+    } catch (e) {
+      console.error('获取推荐失败', e)
+      ElMessage.error('获取推荐失败')
+    } finally {
+      recommendLoading.value = false
+    }
+  }
+
+  const handleViewRecommendJob = (item: JobRecommendation) => {
+    const job: JobItem = {
+      job_id: item.job_id,
+      title: item.title,
+      company_name: item.company_name,
+      city: item.city,
+      province: item.province,
+      industry: item.industry,
+      min_salary: item.min_salary,
+      max_salary: item.max_salary,
+      keywords: typeof item.keywords === 'string' ? item.keywords.split(',') : (item.keywords || []),
+      status: 1,
+      published_at: '',
+      expired_at: '',
+      min_degree: 1,
+      min_exp_years: 0,
+      description: item.description || ''
+    }
+    handleViewJob(job)
   }
 
   onMounted(() => {
@@ -890,5 +1015,163 @@
     font-weight: 500;
     color: var(--el-color-primary);
     background: var(--el-color-primary-light-9);
+  }
+
+  /* AI智能推荐弹窗样式 */
+  .recommend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+
+  .recommend-card {
+    padding: 16px;
+    background: var(--el-fill-color-lightest);
+    border: 1px solid var(--el-border-color-extra-light);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+
+  .recommend-card:hover {
+    border-color: var(--el-color-primary-light-5);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
+  }
+
+  .recommend-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .recommend-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .recommend-company {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .recommend-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .salary-range {
+    margin-left: 12px;
+    font-weight: 500;
+    color: var(--el-color-danger);
+  }
+
+  .recommend-reason {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--el-bg-color);
+    border-radius: 8px;
+  }
+
+  .reason-label {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-regular);
+  }
+
+  .reason-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
+  }
+
+  .recommend-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* 推荐规则弹窗样式 */
+  .rules-link {
+    margin-left: auto;
+    font-size: 13px;
+  }
+
+  .rules-content {
+    padding: 8px 0;
+  }
+
+  .rules-title {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .rules-formula {
+    margin: 0 0 16px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--el-color-primary);
+    background: var(--el-fill-color-light);
+    border-radius: 6px;
+  }
+
+  .rules-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .rule-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .rule-icon {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  .rule-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .rule-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+
+  .rule-desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .rules-tip {
+    margin: 0;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    background: var(--el-color-primary-light-9);
+    border-radius: 6px;
   }
 </style>

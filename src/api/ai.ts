@@ -158,3 +158,37 @@ export const generateWarnings = (data: any) => {
     data
   })
 }
+
+// AI 简历优化（需要较长超时，因为涉及 LLM 调用）
+export const optimizeResume = (data: { resume_text: string; target_job: string }) => {
+  return request.post<any>({
+    url: '/api/v1/ai/resume/optimize',
+    data,
+    timeout: 60000 // 60秒超时，LLM 调用较慢
+  })
+}
+
+// 导出简历 PDF
+export const exportResumePdf = (resumeText: string) => {
+  return request.post<any>({
+    url: '/api/v1/ai/resume/export-pdf',
+    data: { resume_text: resumeText, target_job: '' },
+    responseType: 'blob',
+    timeout: 30000 // 30秒超时
+  })
+}
+
+// 解析简历文件（上传 PDF/Word）
+export const parseResumeFile = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return request.post<any>({
+    url: '/api/v1/ai/resume/parse-file',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 60000 // 60秒超时
+  })
+}

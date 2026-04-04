@@ -67,3 +67,25 @@ class QAResponse(BaseModel):
     answer: Optional[str] = None
     sources: Optional[List[str]] = None
     intent: Optional[str] = None
+
+class ResumeOptimizeRequest(BaseModel):
+    resume_text: str
+    target_job: str
+
+class SuggestionItem(BaseModel):
+    section: str
+    original: str
+    suggested: str
+    reason: str
+
+class MatchAnalysis(BaseModel):
+    score: int
+    strengths: List[str]
+    weaknesses: List[str]
+
+class ResumeOptimizeResponse(BaseModel):
+    status: str = "not_implemented"
+    message: str = "AI 简历优化功能开发中"
+    optimized_resume: Optional[str] = None
+    suggestions: Optional[List[SuggestionItem]] = None
+    match_analysis: Optional[MatchAnalysis] = None

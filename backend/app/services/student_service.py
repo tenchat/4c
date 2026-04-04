@@ -60,8 +60,6 @@ class StudentService:
             .limit(limit)
         )
 
-        # TODO: 完善推荐逻辑（匹配城市/行业）
-
         result = await self.db.execute(query)
         rows = result.all()
 
@@ -73,6 +71,73 @@ class StudentService:
             jobs.append(job)
 
         return jobs
+
+    async def get_jobs_with_filters(
+        self,
+        keyword: str = "",
+        city: str = "",
+        industry: str = "",
+        min_salary: int = 0,
+        max_salary: int = 0,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list, int]:
+        """根据筛选条件获取岗位列表"""
+        from sqlalchemy import select, func
+        from app.models.company import Company
+
+        # 构建基础查询
+        query = (
+            select(JobDescription, Company.company_name)
+            .outerjoin(Company, JobDescription.company_id == Company.company_id)
+            .where(JobDescription.status == 1)
+        )
+
+        # 关键词筛选（搜索职位名称和公司名称）
+        if keyword:
+            keyword_pattern = f"%{keyword}%"
+            query = query.where(
+                (JobDescription.title.like(keyword_pattern)) |
+                (Company.company_name.like(keyword_pattern))
+            )
+
+        # 城市筛选
+        if city:
+            query = query.where(JobDescription.city.like(f"%{city}%"))
+
+        # 行业筛选
+        if industry:
+            query = query.where(JobDescription.industry == industry)
+
+        # 薪资范围筛选
+        if min_salary > 0:
+            query = query.where(JobDescription.max_salary >= min_salary)
+        if max_salary > 0:
+            query = query.where(JobDescription.min_salary <= max_salary)
+
+        # 获取总数
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # 分页
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        # 按发布时间排序
+        query = query.order_by(JobDescription.published_at.desc())
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # 转换为包含 company_name 的结果
+        jobs = []
+        for row in rows:
+            job = row[0]
+            job.company_name = row[1] if len(row) > 1 else None
+            jobs.append(job)
+
+        return jobs, total
 
     async def apply_job(self, account_id: str, job_id: str) -> bool:
         # 检查是否重复投递

@@ -310,3 +310,47 @@ class AIService:
                 "sources": [],
                 "session_id": ""
             }
+
+    async def optimize_resume(
+        self,
+        account_id: str,
+        resume_text: str,
+        target_job: str
+    ) -> dict:
+        """
+        AI 简历优化
+
+        Args:
+            account_id: 学生账户ID
+            resume_text: 简历文本
+            target_job: 目标岗位
+
+        Returns:
+            优化结果
+        """
+        try:
+            rag_service = get_rag_service()
+            result = await rag_service.optimize_resume(
+                account_id=account_id,
+                resume_text=resume_text,
+                target_job=target_job,
+            )
+            return {
+                "status": "success",
+                "message": "简历优化完成",
+                "data": result,
+            }
+        except RAGServiceError as e:
+            logger.error(f"RAG 服务错误: {e}")
+            return {
+                "status": "error",
+                "message": e.message,
+                "data": None
+            }
+        except Exception as e:
+            logger.error(f"optimize_resume 异常: {e}")
+            return {
+                "status": "error",
+                "message": str(e),
+                "data": None
+            }
