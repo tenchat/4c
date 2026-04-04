@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \"SELECT province, city, job_title, shortage_level, data_year FROM scarce_talents LIMIT 5;\")",
+      "Bash(sqlite3 f:/repos/art-design-pro/backend/employment.db ':*)",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \".read f:/repos/art-design-pro/backend/migrations/002_add_company_profile_pending.sql\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \"SELECT name FROM sqlite_master WHERE type='table' AND name='company_profile_pending';\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \".schema company_profile_pending\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \"SELECT COUNT\\(*\\) as pending_count FROM companies WHERE verified = 0;\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \"SELECT company_id, company_name, verified FROM companies LIMIT 5;\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \".schema job_applications\")",
+      "Bash(sqlite3 \"f:/repos/art-design-pro/backend/employment.db\" \"SELECT job_id, account_id, COUNT\\(*\\) as cnt FROM job_applications GROUP BY job_id, account_id HAVING cnt > 1;\")"
+    ]
+  }
+}

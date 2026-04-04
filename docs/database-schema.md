@@ -346,6 +346,9 @@ erDiagram
     JOB_DESCRIPTIONS ||--o{ JOB_APPLICATIONS : "received"
     JOB_DESCRIPTIONS ||--o{ USER_JOB_EXPOSURE : "exposed to"
     JOB_DESCRIPTIONS ||--o{ USER_JOB_SATISFACTION : "rated by"
+
+    ACCOUNTS ||--o{ CHAT_SESSIONS : "has"
+    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : "contains"
 ```
 
 ---
@@ -708,7 +711,33 @@ erDiagram
 
 **记录数**: 0条
 
-### 22. employment_warnings (就业预警表)
+#### 22. chat_sessions (AI聊天会话表)
+
+| 字段       | 类型 | 说明              |
+| ---------- | ---- | ----------------- |
+| session_id | TEXT | 会话ID (PK, UUID) |
+| user_id   | TEXT | 用户ID (FK)       |
+| role_type | TEXT | 用户角色          |
+| title     | TEXT | 会话标题          |
+| created_at | TEXT | 创建时间          |
+| updated_at | TEXT | 更新时间          |
+
+**说明**: 存储 AI 聊天的会话信息，通过 user_id 与 accounts 表关联，实现多用户聊天历史隔离。
+
+### 23. chat_messages (AI聊天消息表)
+
+| 字段         | 类型 | 说明              |
+| ------------ | ---- | ----------------- |
+| message_id   | TEXT | 消息ID (PK, UUID) |
+| session_id   | TEXT | 会话ID (FK)       |
+| message_type | TEXT | 消息类型          |
+| content      | TEXT | 消息内容          |
+| sources      | TEXT | 来源信息(可选)   |
+| created_at   | TEXT | 创建时间          |
+
+**说明**: 存储聊天消息详情，message_type 为 'user' 或 'assistant'。
+
+### 24. employment_warnings (就业预警表)
 
 | 字段          | 类型    | 说明              |
 | ------------- | ------- | ----------------- |
@@ -723,7 +752,7 @@ erDiagram
 
 **记录数**: 0条
 
-### 23. system_configs (系统配置表)
+### 25. system_configs (系统配置表)
 
 | 字段         | 类型 | 说明        |
 | ------------ | ---- | ----------- |
@@ -744,4 +773,5 @@ erDiagram
 | 学生画像     | 5      | 11 条         |
 | 企业         | 4      | 23 条         |
 | 参考/AI/系统 | 4      | 0 条          |
-| **合计**     | **20** | **20,643 条** |
+| 聊天历史     | 2      | 待定          |
+| **合计**     | **22** | **20,643+ 条** |

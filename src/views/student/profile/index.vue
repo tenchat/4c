@@ -428,10 +428,21 @@
 <style scoped>
   .page-student-profile {
     padding: 20px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  :deep(.el-card) {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   :deep(.el-card__body) {
-    overflow-y: visible;
+    flex: 1;
+    overflow-y: auto;
+    max-height: none;
   }
 
   .skill-tags-wrapper {
@@ -462,7 +473,6 @@
     gap: 16px;
     width: 100%;
     box-sizing: border-box;
-    max-height: 300px;
   }
 
   .resume-upload-row {
@@ -476,32 +486,27 @@
     border: 1px solid var(--el-border-color-extra-light);
     border-radius: 8px;
     padding: 12px;
-    overflow: hidden;
     width: 100%;
     box-sizing: border-box;
-    max-height: 200px;
   }
 
   .resume-text-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
-    font-size: 13px;
+    margin-bottom: 12px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-secondary);
   }
 
   .resume-text-content {
-    max-height: 150px;
-    overflow-y: auto;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.8;
     color: var(--el-text-color-regular);
     white-space: pre-wrap;
-    word-break: break-all;
-    padding-right: 8px;
-    box-sizing: border-box;
-    width: 100%;
+    word-break: break-word;
+    max-height: 500px;
+    overflow-y: auto;
   }
 </style>

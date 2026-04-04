@@ -75,6 +75,8 @@ class StudentService:
         return jobs
 
     async def apply_job(self, account_id: str, job_id: str) -> bool:
+        from sqlalchemy.exc import IntegrityError
+
         # 检查是否重复投递
         result = await self.db.execute(
             select(JobApplication).where(
@@ -92,5 +94,10 @@ class StudentService:
             status=0
         )
         self.db.add(application)
-        await self.db.commit()
-        return True
+        try:
+            await self.db.commit()
+            return True
+        except IntegrityError:
+            # 并发情况下唯一约束冲突，返回 False
+            await self.db.rollback()
+            return False

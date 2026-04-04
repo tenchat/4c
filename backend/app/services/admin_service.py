@@ -182,8 +182,7 @@ class AdminService:
                 "job_type": t.job_type,
                 "shortage_level": t.shortage_level,
                 "industry": t.industry,
-                "data_year": t.data_year,
-                "source": t.source
+                "data_year": t.data_year
             } for t in talents],
             "total": len(talents)
         }
@@ -235,19 +234,53 @@ class AdminService:
                 "employment_rate": round(rate, 2)
             })
 
-        # 行业分布
+        # 统计岗位总数
+        jobs_count = (await self.db.execute(
+            select(func.count(JobDescription.job_id))
+        )).scalar() or 0
+
+        # 统计学生总数（直接COUNT，不依赖学校）
+        total_students_count = (await self.db.execute(
+            select(func.count(StudentProfile.profile_id))
+        )).scalar() or 0
+
+        # 统计已就业学生数
+        employed_count = (await self.db.execute(
+            select(func.count(StudentProfile.profile_id))
+            .where(StudentProfile.employment_status == 1)
+        )).scalar() or 0
+
+        # 行业分布（所有企业，不限制行业）
         industry_result = await self.db.execute(
             select(Company.industry, func.count(Company.company_id))
-            .where(Company.industry.isnot(None))
             .group_by(Company.industry)
         )
-        industry_distribution = [{"industry": i, "count": c} for i, c in industry_result.all()]
+        industry_distribution = [{"industry": i or "未分类", "count": c} for i, c in industry_result.all()]
+
+        # 统计企业总数（直接COUNT）
+        total_companies_count = (await self.db.execute(
+            select(func.count(Company.company_id))
+        )).scalar() or 0
+
+        employment_rate = round((employed_count / total_students_count * 100), 2) if total_students_count > 0 else 0
+
+        # 待审核企业数量
+        pending_companies_count = (await self.db.execute(
+            select(func.count(Company.company_id))
+            .where(Company.verified == False)
+        )).scalar() or 0
 
         data = {
+            "stats": {
+                "total_students": total_students_count,
+                "total_companies": total_companies_count,
+                "total_jobs": jobs_count,
+                "overall_employment_rate": employment_rate,
+                "monthly_new_resumes": 0,
+                "pending_companies": pending_companies_count
+            },
             "university_stats": university_stats,
-            "industry_distribution": industry_distribution,
-            "total_students": sum(s["total_students"] for s in university_stats),
-            "total_companies": sum(i["count"] for i in industry_distribution)
+            "industry_distribution": industry_distribution
         }
 
         # 缓存30分钟
