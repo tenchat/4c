@@ -9,8 +9,11 @@ export interface LoginParams {
 export interface RegisterParams {
   username: string
   password: string
-  real_name?: string
   role: 'student' | 'school_admin' | 'company_admin'
+  student_no?: string       // 学生必填
+  real_name?: string        // 学生姓名
+  enterprise_name?: string  // 企业名称
+  registration_code?: string // 学校管理员注册码
 }
 
 export const fetchLogin = (params: LoginParams) =>
@@ -30,3 +33,11 @@ export const fetchGetUserInfo = () =>
 
 export const fetchRefresh = () =>
   request.post<any>({ url: '/api/v1/auth/refresh' })
+
+export interface ChangePasswordParams {
+  old_password: string
+  new_password: string
+}
+
+export const fetchChangePassword = (params: ChangePasswordParams) =>
+  request.post<any>({ url: '/api/v1/auth/change-password', data: params })

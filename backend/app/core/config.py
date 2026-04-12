@@ -12,9 +12,12 @@ class Settings(BaseSettings):
     MINIMAX_API_KEY: str = ""
     MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
     DEEPSEEK_API_KEY: str = ""
+    DASHSCOPE_API_KEY: str = ""
     CHROMA_PERSIST_DIR: str = "./chroma_db"
     DEFAULT_UNIVERSITY_ID: str = ""
     RAG_SERVICE_URL: str = "http://localhost:1145"  # RAG 服务地址
+    UPLOAD_DIR: str = "./uploads/resumes"  # 简历上传目录
+    SCHOOL_ADMIN_REGISTRATION_CODE: str = ""
 
     class Config:
         env_file = ".env"

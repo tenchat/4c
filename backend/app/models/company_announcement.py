@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, Text, Date, Integer, SmallInteger, ForeignKey, DateTime
+from sqlalchemy import Column, String, Text, Date, Integer, SmallInteger, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from app.models.base import Base, TimestampMixin
 
@@ -23,7 +23,5 @@ class CompanyAnnouncement(Base, TimestampMixin):
     deadline = Column(Date, nullable=True)
     status = Column(SmallInteger, nullable=False, default=1, index=True)
     published_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, server_default="CURRENT_TIMESTAMP", nullable=False)
-    updated_at = Column(DateTime, server_default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", nullable=False)
 
     company = relationship("Company", back_populates="announcements")

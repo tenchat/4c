@@ -38,3 +38,29 @@ export interface ProfileReviewParams {
 
 export const reviewProfileUpdate = (pendingId: string, data: ProfileReviewParams) =>
   request.put<any>({ url: `/api/v1/admin/company-profile-updates/${pendingId}/review`, data })
+
+// 学校管理员账号审核
+export const fetchSchoolAdmins = (params?: {
+  status?: number
+  current?: number
+  size?: number
+}) => request.get<any>({ url: '/api/v1/admin/school-admins/pending', params })
+
+export const verifySchoolAdmin = (accountId: string, action: 'approve' | 'reject') =>
+  request.put<any>({ url: `/api/v1/admin/school-admins/${accountId}/verify`, data: { action } })
+
+// 企业管理员账号审核
+export const fetchCompanyAdmins = (params?: {
+  status?: number
+  current?: number
+  size?: number
+}) => request.get<any>({ url: '/api/v1/admin/company-admins/pending', params })
+
+export const verifyCompanyAdmin = (accountId: string, action: 'approve' | 'reject') =>
+  request.put<any>({ url: `/api/v1/admin/company-admins/${accountId}/verify`, data: { action } })
+
+// 系统配置
+export const fetchConfigs = () => request.get<any>({ url: '/api/v1/admin/configs' })
+
+export const updateConfig = (configKey: string, configValue: string, description?: string) =>
+  request.put<any>({ url: `/api/v1/admin/configs/${configKey}`, data: { config_value: configValue, description } })

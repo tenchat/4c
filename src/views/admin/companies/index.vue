@@ -28,7 +28,7 @@
               {{ currentCompany.company_name }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="行业">
-              {{ currentCompany.industry }}
+              {{ INDUSTRY_MAP[currentCompany.industry] || currentCompany.industry }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="企业规模">
               {{ SCALE_MAP[currentCompany.size] || currentCompany.size || '-' }}
@@ -55,9 +55,7 @@
         <template #footer>
           <ElSpace>
             <ElButton @click="verifyDialogVisible = false">取消</ElButton>
-            <ElButton type="danger" @click="handleReject" :loading="actionLoading">
-              拒绝
-            </ElButton>
+            <ElButton type="danger" @click="handleReject" :loading="actionLoading"> 拒绝 </ElButton>
             <ElButton type="success" @click="handleApprove" :loading="actionLoading">
               通过
             </ElButton>
@@ -73,7 +71,7 @@
               {{ currentCompany.company_name }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="行业">
-              {{ currentCompany.industry }}
+              {{ INDUSTRY_MAP[currentCompany.industry] || currentCompany.industry }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="企业规模">
               {{ SCALE_MAP[currentCompany.size] || currentCompany.size || '-' }}
@@ -129,6 +127,7 @@
   const verifyRemark = ref('')
 
   const INDUSTRY_MAP: Record<string, string> = {
+    // 英文key (企业表)
     internet: '互联网/IT',
     finance: '金融',
     education: '教育',
@@ -136,7 +135,31 @@
     real_estate: '房地产',
     healthcare: '医疗健康',
     government: '政府/事业单位',
-    other: '其他'
+    other: '其他',
+    // 中文值 (学生表cur_industry)
+    互联网: '互联网/IT',
+    '金融/银行': '金融/银行',
+    教育培训: '教育培训',
+    '房地产/建筑': '房地产/建筑',
+    医药生物: '医药生物',
+    '政府/公共事业': '政府/公共事业',
+    计算机软件: '计算机软件',
+    '电子/半导体': '电子/半导体',
+    化工: '化工',
+    '机械/装备制造': '机械/装备制造',
+    '汽车/交通设备': '汽车/交通设备',
+    '通信/网络设备': '通信/网络设备',
+    '电力/能源': '电力/能源',
+    新材料: '新材料',
+    航空航天: '航空航天',
+    现代农业: '现代农业',
+    '批发/零售': '批发/零售',
+    '文化/传媒': '文化/传媒',
+    保险: '保险',
+    环保: '环保',
+    // desire_industry 混合值
+    金融: '金融',
+    '互联网/IT': '互联网/IT'
   }
 
   const SCALE_MAP: Record<string, string> = {
@@ -153,7 +176,8 @@
     getData,
     handleSizeChange,
     handleCurrentChange,
-    refreshData
+    refreshData,
+    replaceSearchParams
   } = useTable({
     core: {
       apiFn: fetchPendingCompanies as any,
@@ -183,10 +207,14 @@
           label: '审核状态',
           width: 100,
           formatter: (row: CompanyItem) =>
-            h(ElTag, {
-              type: row.verified ? 'success' : 'danger',
-              size: 'small'
-            }, () => row.verified ? '通过' : '未通过')
+            h(
+              ElTag,
+              {
+                type: row.verified ? 'success' : 'danger',
+                size: 'small'
+              },
+              () => (row.verified ? '通过' : '未通过')
+            )
         },
         { prop: 'created_at', label: '申请时间', width: 180 },
         {
@@ -212,19 +240,23 @@
     }
   })
 
-  // 监听数据变化，更新待审核/已审核数量
-  watch(data, (newData) => {
-    if (activeTab.value === 0) {
-      pendingCount.value = newData?.length || 0
-    } else {
-      approvedCount.value = newData?.length || 0
+  // 监听分页总数变化，更新待审核/已审核数量
+  watch(
+    () => pagination.total,
+    (newTotal) => {
+      if (activeTab.value === 0) {
+        pendingCount.value = newTotal || 0
+      } else {
+        approvedCount.value = newTotal || 0
+      }
     }
-  })
+  )
 
   const handleTabChange = (tab: number) => {
     activeTab.value = tab
+    // 先重置搜索参数，确保 status 被正确更新
+    replaceSearchParams({ status: tab })
     handleCurrentChange(1)
-    getData({ status: tab })
   }
 
   const handleView = (row: CompanyItem) => {

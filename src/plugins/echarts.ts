@@ -19,8 +19,12 @@ import {
   ScatterChart,
   RadarChart,
   MapChart,
-  CandlestickChart
+  CandlestickChart,
+  GaugeChart
 } from 'echarts/charts'
+
+// 导入词云图
+import 'echarts-wordcloud'
 
 // 导入组件
 import {
@@ -50,6 +54,7 @@ echarts.use([
   RadarChart,
   MapChart,
   CandlestickChart,
+  GaugeChart,
 
   // 组件
   TitleComponent,

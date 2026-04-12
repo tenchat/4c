@@ -8,14 +8,40 @@
         </div>
       </template>
 
+      <!-- 上传方式选择 -->
+      <el-radio-group v-model="uploadType" class="mb-4">
+        <el-radio value="text">输入简历内容</el-radio>
+        <el-radio value="file">上传文档</el-radio>
+      </el-radio-group>
+
       <el-form :model="formData" label-width="100px" class="ai-form">
-        <el-form-item label="简历文本">
+        <!-- 文字输入模式 -->
+        <el-form-item v-if="uploadType === 'text'" label="简历文本">
           <el-input
             v-model="formData.resumeText"
             type="textarea"
             :rows="10"
-            placeholder="请粘贴您的简历内容"
+            placeholder="请粘贴您的简历内容，支持 Markdown 格式"
           />
+        </el-form-item>
+
+        <!-- 文件上传模式 -->
+        <el-form-item v-else label="上传简历">
+          <el-upload
+            class="resume-uploader"
+            drag
+            accept=".pdf,.doc,.docx"
+            :auto-upload="false"
+            :limit="1"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+          >
+            <el-icon class="el-icon--upload"><Upload /></el-icon>
+            <div class="el-upload__text">拖拽文件到此处 或 <em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持 PDF、Word 文档，大小不超过 10MB</div>
+            </template>
+          </el-upload>
         </el-form-item>
 
         <el-form-item label="目标岗位">
@@ -27,142 +53,169 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleAnalyze">
+          <el-button type="primary" :loading="optimizeLoading" @click="handleAnalyze">
             开始分析
           </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <!-- 结果展示区域 -->
-    <el-card v-if="showResult" class="art-card-xs mt-4 result-card">
-      <template #header>
-        <div class="card-header">
-          <span class="title">分析结果</span>
-        </div>
-      </template>
+    <!-- 优化结果弹窗 -->
+    <el-dialog
+      v-model="resultDialogVisible"
+      title="简历优化结果"
+      width="900px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="optimizeLoading" class="result-container">
+        <el-empty v-if="!optimizedResume && !suggestions.length" description="暂无优化结果" />
 
-      <div class="result-content" v-loading="loading">
-        <!-- ATS 评分 -->
-        <div class="ats-section">
-          <div class="ats-score">
-            <el-progress
-              type="circle"
-              :percentage="resultData.atsScore || 0"
-              :width="140"
-              :stroke-width="12"
-              :color="atsScoreColor"
-            >
-              <template #default>
-                <div class="progress-content">
-                  <span class="score-value">{{ resultData.atsScore || 0 }}</span>
-                  <span class="score-label">ATS评分</span>
+        <div v-else class="result-content">
+          <!-- 左侧：优化后简历 -->
+          <div class="resume-panel">
+            <div class="panel-header">
+              <span>优化后简历</span>
+              <el-tag v-if="matchScore > 0" :type="matchScore >= 80 ? 'success' : matchScore >= 60 ? 'warning' : 'danger'">
+                匹配度 {{ matchScore }}%
+              </el-tag>
+            </div>
+            <el-input
+              v-model="optimizedResume"
+              type="textarea"
+              :rows="18"
+              class="resume-editor"
+              placeholder="优化后的简历内容将显示在这里，您可以直接编辑"
+            />
+            <div class="panel-actions">
+              <el-button type="primary" @click="handleApplyAll">采纳全部建议</el-button>
+              <el-button @click="handleExportPdf">导出 PDF</el-button>
+            </div>
+          </div>
+
+          <!-- 右侧：修改建议 -->
+          <div class="suggestions-panel">
+            <div class="panel-header">
+              <span>修改建议</span>
+              <el-badge :value="suggestions.length" type="primary" />
+            </div>
+            <div class="suggestions-list">
+              <div v-for="(item, index) in suggestions" :key="index" class="suggestion-card">
+                <div class="suggestion-section">
+                  <el-tag size="small" type="info">{{ item.section }}</el-tag>
                 </div>
-              </template>
-            </el-progress>
-          </div>
-          <div class="ats-tips">
-            <p class="tips-title">提升建议</p>
-            <p class="tips-text">{{ resultData.atsTips || '继续优化您的简历内容' }}</p>
-          </div>
-        </div>
-
-        <!-- 关键词分析 -->
-        <el-row :gutter="20" class="keywords-section">
-          <el-col :span="12">
-            <div class="keyword-card matched">
-              <h4>
-                <el-icon><SuccessFilled /></el-icon>
-                已匹配关键词
-              </h4>
-              <div class="keyword-tags">
-                <el-tag
-                  v-for="(keyword, index) in resultData.matchedKeywords"
-                  :key="index"
-                  type="success"
-                  class="keyword-tag"
-                >
-                  {{ keyword }}
-                </el-tag>
+                <div class="suggestion-content">
+                  <div class="original">
+                    <span class="label">原文：</span>
+                    <span class="value">{{ item.original }}</span>
+                  </div>
+                  <div class="arrow">
+                    <el-icon><Bottom /></el-icon>
+                  </div>
+                  <div class="suggested">
+                    <span class="label">建议：</span>
+                    <span class="value">{{ item.suggested }}</span>
+                  </div>
+                  <div class="reason">
+                    <span class="label">原因：</span>
+                    <span class="value">{{ item.reason }}</span>
+                  </div>
+                </div>
+                <div class="suggestion-actions">
+                  <el-button size="small" type="primary" @click="handleApplyOne(index)">
+                    采纳此建议
+                  </el-button>
+                </div>
               </div>
             </div>
-          </el-col>
-          <el-col :span="12">
-            <div class="keyword-card missing">
-              <h4>
-                <el-icon><WarningFilled /></el-icon>
-                缺失关键词
-              </h4>
-              <div class="keyword-tags">
-                <el-tag
-                  v-for="(keyword, index) in resultData.missingKeywords"
-                  :key="index"
-                  type="danger"
-                  class="keyword-tag"
-                >
-                  {{ keyword }}
-                </el-tag>
-              </div>
-            </div>
-          </el-col>
-        </el-row>
-
-        <!-- 优化建议 -->
-        <div class="suggestions-section">
-          <h4>
-            <el-icon><Cpu /></el-icon>
-            优化建议
-          </h4>
-          <ul class="suggestions-list">
-            <li v-for="(item, index) in resultData.suggestions" :key="index">
-              {{ item }}
-            </li>
-          </ul>
+          </div>
         </div>
       </div>
-    </el-card>
+
+      <template #footer>
+        <el-button @click="resultDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { analyzeResume } from '@/api/ai'
-  import { ElMessage } from 'element-plus'
-  import { SuccessFilled, WarningFilled, Cpu } from '@element-plus/icons-vue'
+  import { optimizeResume, parseResumeFile } from '@/api/ai'
+  import { ElMessage, ElMessageBox } from 'element-plus'
+  import type { UploadFile } from 'element-plus'
+  import { useUserStore } from '@/store/modules/user'
+  import { Upload, Bottom } from '@element-plus/icons-vue'
+  import { saveAs } from 'file-saver'
 
   defineOptions({ name: 'AiResume' })
 
-  interface ResumeResult {
-    atsScore: number
-    atsTips: string
-    matchedKeywords: string[]
-    missingKeywords: string[]
-    suggestions: string[]
+  interface Suggestion {
+    section: string
+    original: string
+    suggested: string
+    reason: string
   }
 
-  const loading = ref(false)
-  const showResult = ref(false)
-  const resultData = ref<ResumeResult>({
-    atsScore: 0,
-    atsTips: '',
-    matchedKeywords: [],
-    missingKeywords: [],
-    suggestions: []
-  })
+  interface MatchAnalysis {
+    score: number
+    strengths: string[]
+    weaknesses: string[]
+  }
+
+  interface OptimizeResult {
+    optimized_resume: string
+    suggestions: Suggestion[]
+    match_analysis: MatchAnalysis
+  }
+
+  const uploadType = ref<'text' | 'file'>('text')
+  const selectedFile = ref<File | null>(null)
+  const optimizeLoading = ref(false)
+  const resultDialogVisible = ref(false)
 
   const formData = ref({
     resumeText: '',
     targetJob: ''
   })
 
-  const atsScoreColor = computed(() => {
-    const score = resultData.value.atsScore
-    if (score >= 80) return '#67c23a'
-    if (score >= 60) return '#e6a23c'
-    return '#f56c6c'
-  })
+  const optimizedResume = ref('')
+  const suggestions = ref<Suggestion[]>([])
+  const matchScore = ref(0)
+  const matchAnalysis = ref<MatchAnalysis | null>(null)
 
+  // 处理文件选择
+  const handleFileChange = async (uploadFile: UploadFile, _fileList: UploadFile[]) => {
+    selectedFile.value = uploadFile.raw || null
+
+    if (!uploadFile.raw) {
+      ElMessage.error('文件读取失败')
+      return
+    }
+
+    ElMessage.info('正在解析文件...')
+
+    try {
+      const res: any = await parseResumeFile(uploadFile.raw)
+      if (res && res.text) {
+        formData.value.resumeText = res.text
+        ElMessage.success(`已加载文件: ${uploadFile.name}，解析了 ${res.char_count || 0} 个字符`)
+      } else {
+        ElMessage.error('文件解析失败')
+      }
+    } catch (error) {
+      console.error('文件解析失败:', error)
+      ElMessage.error('文件解析失败，请稍后重试')
+    }
+  }
+
+  // 处理文件移除
+  const handleFileRemove = () => {
+    selectedFile.value = null
+    formData.value.resumeText = ''
+  }
+
+  // 开始分析
   const handleAnalyze = async () => {
-    if (!formData.value.resumeText) {
+    if (uploadType.value === 'text' && !formData.value.resumeText) {
       ElMessage.warning('请输入简历内容')
       return
     }
@@ -172,48 +225,114 @@
       return
     }
 
-    loading.value = true
+    optimizeLoading.value = true
+    resultDialogVisible.value = true
+
     try {
-      const res: any = await analyzeResume({
+      const res: any = await optimizeResume({
         resume_text: formData.value.resumeText,
         target_job: formData.value.targetJob
       })
-      if (res.code === 200 || res.status === 'not_implemented') {
-        // Stub 模式下使用模拟数据
-        resultData.value = {
-          atsScore: 72,
-          atsTips: '简历整体结构良好，建议增加更多量化数据和项目成果描述',
-          matchedKeywords: [
-            'Python',
-            '数据分析',
-            '机器学习',
-            '团队协作',
-            '项目开发'
-          ],
-          missingKeywords: [
-            '深度学习',
-            '大数据',
-            '云计算',
-            '产品运营',
-            'SQL'
-          ],
-          suggestions: [
-            '建议在项目经历中增加量化指标，如性能提升百分比、用户增长数量等',
-            '缺少与目标岗位相关的深度学习经验，建议补充相关项目',
-            '建议增加数据分析相关工具的熟练度说明，如Spark、Hive等',
-            '面试官注重解决问题的能力，建议增加问题分析和解决的案例'
-          ]
-        }
-        showResult.value = true
-        ElMessage.success('分析完成')
+
+      // HTTP 工具已提取 data，所以 res 直接是 {optimized_resume, suggestions, match_analysis}
+      if (res && res.optimized_resume) {
+        optimizedResume.value = res.optimized_resume || formData.value.resumeText
+        suggestions.value = res.suggestions || []
+        matchAnalysis.value = res.match_analysis || null
+        matchScore.value = res.match_analysis?.score || 0
+        ElMessage.success('简历优化完成')
       } else {
-        ElMessage.error(res.message || '分析失败')
+        ElMessage.error('优化结果格式异常')
       }
     } catch (error) {
       console.error('AI 简历分析失败:', error)
       ElMessage.error('分析失败，请稍后重试')
     } finally {
-      loading.value = false
+      optimizeLoading.value = false
+    }
+  }
+
+  // 采纳单条建议
+  const handleApplyOne = (index: number) => {
+    const suggestion = suggestions.value[index]
+    if (!suggestion) return
+
+    // 简单的替换逻辑
+    if (optimizedResume.value.includes(suggestion.original)) {
+      ElMessageBox.confirm(
+        `将"${suggestion.original.slice(0, 30)}..."替换为"${suggestion.suggested.slice(0, 30)}..."？`,
+        '采纳建议',
+        { confirmButtonText: '确认', cancelButtonText: '取消', type: 'info' }
+      ).then(() => {
+        optimizedResume.value = optimizedResume.value.replace(
+          suggestion.original,
+          suggestion.suggested
+        )
+        suggestions.value.splice(index, 1)
+        ElMessage.success('已采纳建议')
+      }).catch(() => {})
+    } else {
+      ElMessage.warning('未找到匹配原文，请手动修改')
+    }
+  }
+
+  // 采纳全部建议
+  const handleApplyAll = () => {
+    if (!suggestions.value.length) {
+      ElMessage.warning('暂无建议可采纳')
+      return
+    }
+
+    ElMessageBox.confirm(
+      `确定要采纳全部 ${suggestions.value.length} 条建议吗？`,
+      '采纳全部建议',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'info' }
+    ).then(() => {
+      // 按顺序应用所有建议
+      for (const suggestion of suggestions.value) {
+        if (optimizedResume.value.includes(suggestion.original)) {
+          optimizedResume.value = optimizedResume.value.replace(
+            suggestion.original,
+            suggestion.suggested
+          )
+        }
+      }
+      suggestions.value = []
+      ElMessage.success('已采纳全部建议')
+    }).catch(() => {})
+  }
+
+  // 导出 PDF
+  const handleExportPdf = async () => {
+    if (!optimizedResume.value) {
+      ElMessage.warning('没有可导出的简历内容')
+      return
+    }
+
+    try {
+      ElMessage.info('正在生成 PDF...')
+
+      // 使用 fetch 直接下载，避免 axios blob 处理问题
+      const userStore = useUserStore()
+      const response = await fetch('/api/v1/ai/resume/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': userStore.accessToken ? `Bearer ${userStore.accessToken}` : ''
+        },
+        body: JSON.stringify({ resume_text: optimizedResume.value, target_job: '' })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const blob = await response.blob()
+      saveAs(blob, '优化后简历.pdf')
+      ElMessage.success('PDF 导出成功')
+    } catch (error) {
+      console.error('PDF 导出失败:', error)
+      ElMessage.error('PDF 导出失败，请稍后重试')
     }
   }
 </script>
@@ -234,153 +353,119 @@
     font-weight: 600;
   }
 
+  .mb-4 {
+    margin-bottom: 16px;
+  }
+
   .ai-form {
     max-width: 800px;
   }
 
-  .result-card {
-    animation: fadeIn 0.3s ease-in-out;
+  .resume-uploader {
+    width: 100%;
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .result-container {
+    min-height: 400px;
   }
 
   .result-content {
-    padding: 20px 0;
-  }
-
-  .ats-section {
     display: flex;
-    align-items: center;
-    gap: 40px;
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f5f7fa;
-    border-radius: 8px;
+    gap: 20px;
+    height: 100%;
   }
 
-  .ats-score {
-    flex-shrink: 0;
-  }
-
-  .progress-content {
+  .resume-panel {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+  }
+
+  .suggestions-panel {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-  }
-
-  .score-value {
-    font-size: 32px;
-    font-weight: 700;
-    color: #303133;
-  }
-
-  .score-label {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 4px;
-  }
-
-  .ats-tips {
-    flex: 1;
-  }
-
-  .tips-title {
-    font-size: 16px;
+    margin-bottom: 12px;
     font-weight: 600;
-    color: #303133;
-    margin-bottom: 8px;
   }
 
-  .tips-text {
-    font-size: 14px;
-    color: #606266;
-    line-height: 1.6;
+  .resume-editor {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
   }
 
-  .keywords-section {
-    margin-bottom: 30px;
-  }
-
-  .keyword-card {
-    padding: 20px;
-    border-radius: 8px;
-    min-height: 120px;
-  }
-
-  .keyword-card h4 {
+  .panel-actions {
     display: flex;
-    align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
-    font-size: 16px;
-  }
-
-  .matched {
-    background: linear-gradient(135deg, #f0f9eb 0%, #e8f5e1 100%);
-    border: 1px solid #d4edda;
-  }
-
-  .matched h4 {
-    color: #67c23a;
-  }
-
-  .missing {
-    background: linear-gradient(135deg, #fef0f0 0%, #fee 100%);
-    border: 1px solid #f5c6cb;
-  }
-
-  .missing h4 {
-    color: #f56c6c;
-  }
-
-  .keyword-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .keyword-tag {
-    margin: 0;
-  }
-
-  .suggestions-section {
-    background: #ecf5ff;
-    border-radius: 8px;
-    padding: 20px;
-  }
-
-  .suggestions-section h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    font-size: 16px;
-    color: #409eff;
+    margin-top: 12px;
+    justify-content: flex-end;
   }
 
   .suggestions-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 500px;
+    padding-right: 8px;
   }
 
-  .suggestions-list li {
-    padding: 10px 0;
+  .suggestion-card {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .suggestion-section {
+    margin-bottom: 8px;
+  }
+
+  .suggestion-content {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .suggestion-content .label {
+    font-weight: 600;
     color: #606266;
-    font-size: 14px;
-    border-bottom: 1px dashed #b3d8fd;
   }
 
-  .suggestions-list li:last-child {
-    border-bottom: none;
+  .suggestion-content .value {
+    color: #303133;
+  }
+
+  .suggestion-content .original {
+    color: #909399;
+    text-decoration: line-through;
+  }
+
+  .suggestion-content .suggested {
+    color: #67c23a;
+    font-weight: 500;
+  }
+
+  .suggestion-content .reason {
+    color: #909399;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .arrow {
+    text-align: center;
+    color: #409eff;
+    padding: 4px 0;
+  }
+
+  .suggestion-actions {
+    margin-top: 8px;
+    text-align: right;
   }
 </style>

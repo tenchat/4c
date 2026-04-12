@@ -33,7 +33,8 @@ export default ({ mode }: { mode: string }) => {
         },
         '/v1': {
           target: VITE_API_PROXY_URL,
-          changeOrigin: true
+          changeOrigin: true,
+          rewrite: (path) => `/api${path}`
         }
       },
       host: '0.0.0.0'
@@ -90,7 +91,7 @@ export default ({ mode }: { mode: string }) => {
       }),
       // 按需定制主题配置
       ElementPlus({
-        useSource: true
+        useSource: false
       }),
       // 压缩
       viteCompression({
@@ -132,9 +133,10 @@ export default ({ mode }: { mode: string }) => {
         // sass variable and mixin
         scss: {
           additionalData: `
-            @use "@styles/core/el-light.scss" as *; 
+            @use "@styles/core/el-light.scss" as *;
             @use "@styles/core/mixin.scss" as *;
-          `
+          `,
+          silenceDeprecations: ['global-builtin']
         }
       },
       postcss: {

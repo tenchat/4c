@@ -6,22 +6,11 @@
         <div class="flex justify-between items-center">
           <span class="text-lg font-medium">企业信息</span>
           <div class="flex items-center gap-2">
-            <ElTag v-if="pendingStatus === 'pending'" type="warning">待审核</ElTag>
-            <ElTag v-else-if="formData.verified" type="success">已认证</ElTag>
+            <ElTag v-if="formData.verified" type="success">已认证</ElTag>
             <ElTag v-else type="info">未认证</ElTag>
           </div>
         </div>
       </template>
-
-      <!-- 待审核提示 -->
-      <ElAlert
-        v-if="pendingStatus === 'pending'"
-        title="您的信息更新正在审核中，请等待学校管理员审核通过"
-        type="info"
-        show-icon
-        :closable="false"
-        class="mb-4"
-      />
 
       <ArtForm
         ref="formRef"
@@ -40,13 +29,8 @@
     <div class="mt-4 text-right">
       <ElSpace>
         <ElButton @click="handleReset">重置</ElButton>
-        <ElButton
-          type="primary"
-          :loading="submitLoading"
-          :disabled="pendingStatus === 'pending'"
-          @click="handleSave"
-        >
-          {{ pendingStatus === 'pending' ? '审核中...' : '提交审核' }}
+        <ElButton type="primary" :loading="submitLoading" @click="handleSave">
+          保存
         </ElButton>
       </ElSpace>
     </div>
@@ -54,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-  import { fetchCompanyProfile, submitCompanyProfileForReview } from '@/api/company'
+  import { fetchCompanyProfile, updateCompanyProfile } from '@/api/company'
   import { ElMessage } from 'element-plus'
   import type { FormInstance, FormRules } from 'element-plus'
 
@@ -75,7 +59,6 @@
 
   const formRef = ref<FormInstance>()
   const submitLoading = ref(false)
-  const pendingStatus = ref<string | null>(null)
 
   const labelWidth = '120px'
   const span = 12
@@ -197,8 +180,6 @@
           contact: res.contact || '',
           contact_phone: res.contact_phone || ''
         }
-        // 设置待审核状态
-        pendingStatus.value = res.pending_update?.status || null
       }
     } catch (error) {
       console.error('获取企业信息失败:', error)
@@ -214,7 +195,7 @@
     try {
       await formRef.value?.validate()
       submitLoading.value = true
-      await submitCompanyProfileForReview({
+      await updateCompanyProfile({
         company_name: formData.value.company_name,
         industry: formData.value.industry,
         city: formData.value.city,
@@ -225,10 +206,9 @@
         contact: formData.value.contact,
         contact_phone: formData.value.contact_phone
       })
-      ElMessage.success('提交成功，请等待学校管理员审核')
-      pendingStatus.value = 'pending'
+      ElMessage.success('保存成功')
     } catch (error) {
-      console.error('提交失败:', error)
+      console.error('保存失败:', error)
     } finally {
       submitLoading.value = false
     }

@@ -41,6 +41,18 @@
     return props.isEmpty || (!props.mapData?.length && !chinaMapJson)
   })
 
+  // 省份名称标准化（去掉后缀以匹配数据库中的名称）
+  const normalizeProvinceName = (name: string): string => {
+    return name
+      .replace(/市$/, '')
+      .replace(/省$/, '')
+      .replace(/自治区$/, '')
+      .replace(/特别行政区$/, '')
+      .replace(/壮族$/, '')
+      .replace(/回族$/, '')
+      .replace(/维吾尔$/, '')
+  }
+
   // 根据 geoJson 数据准备地图数据
   const prepareMapData = (geoJson: {
     features: Array<{ properties: Record<string, unknown> }>
@@ -77,12 +89,15 @@
           color: themeStyles.labelColor
         },
         formatter: ({ data }: { data?: Record<string, unknown> }) => {
-          const { name, adcode, level } = data || {}
+          if (!data) return ''
+          const { name, bachelor, master, doctoral, total } = data
           return `
-            <div style="padding: 8px;">
-              <div><strong>名称:</strong> ${name || '未知区域'}</div>
-              <div><strong>代码:</strong> ${adcode || '暂无'}</div>
-              <div><strong>级别:</strong> ${level || '暂无'}</div>
+            <div style="padding: 8px; min-width: 160px;">
+              <div style="font-size: 14px; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #ddd; padding-bottom: 4px;">${name || '未知区域'}</div>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;"><span>本科生:</span><span style="font-weight: bold;">${bachelor || 0} 人</span></div>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;"><span>硕士生:</span><span style="font-weight: bold;">${master || 0} 人</span></div>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;"><span>博士生:</span><span style="font-weight: bold;">${doctoral || 0} 人</span></div>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0; border-top: 1px solid #ddd; padding-top: 4px; font-weight: bold;"><span>总人数:</span><span>${total || 0} 人</span></div>
             </div>
           `
         }
@@ -203,7 +218,40 @@
     chartInstance.value = echarts.init(chinaMapRef.value)
 
     echarts.registerMap('china', chinaMapJson as any)
-    const mapData = props.mapData.length > 0 ? props.mapData : prepareMapData(chinaMapJson)
+
+    // 如果有省份数据，合并到地图数据中
+    let mapData: Array<Record<string, unknown>>
+    if (props.mapData && props.mapData.length > 0) {
+      // 使用省份数据，将province映射到name用于地图显示
+      const provinceMap = new Map<string, Record<string, unknown>>()
+      props.mapData.forEach((p: Record<string, unknown>) => {
+        // 使用标准化后的省份名作为key
+        const normalizedName = normalizeProvinceName(p.province as string)
+        provinceMap.set(normalizedName, p)
+      })
+
+      // 基于geoJson创建地图数据，合并省份数据
+      mapData = chinaMapJson.features.map((feature) => {
+        const provinceName = feature.properties.name as string
+        const normalizedName = normalizeProvinceName(provinceName)
+        const provinceData = provinceMap.get(normalizedName)
+        return {
+          name: provinceName,
+          adcode: feature.properties.adcode as string,
+          level: feature.properties.level as string,
+          province: provinceName,
+          bachelor: provinceData?.bachelor || 0,
+          master: provinceData?.master || 0,
+          doctoral: provinceData?.doctoral || 0,
+          total: provinceData?.total || 0,
+          value: provinceData?.total || Math.round(Math.random() * 1000),
+          selected: false
+        }
+      })
+    } else {
+      mapData = prepareMapData(chinaMapJson)
+    }
+
     const option = createChartOption(mapData)
 
     chartInstance.value.setOption(option)
@@ -281,7 +329,35 @@
     () => props.mapData,
     () => {
       if (chartInstance.value && !isEmpty.value) {
-        const mapData = props.mapData.length > 0 ? props.mapData : prepareMapData(chinaMapJson)
+        // 和initMap一样的逻辑，合并省份数据到地图
+        let mapData: Array<Record<string, unknown>>
+        if (props.mapData && props.mapData.length > 0) {
+          const provinceMap = new Map<string, Record<string, unknown>>()
+          props.mapData.forEach((p: Record<string, unknown>) => {
+            const normalizedName = normalizeProvinceName(p.province as string)
+            provinceMap.set(normalizedName, p)
+          })
+
+          mapData = chinaMapJson.features.map((feature) => {
+            const provinceName = feature.properties.name as string
+            const normalizedName = normalizeProvinceName(provinceName)
+            const provinceData = provinceMap.get(normalizedName)
+            return {
+              name: provinceName,
+              adcode: feature.properties.adcode as string,
+              level: feature.properties.level as string,
+              province: provinceName,
+              bachelor: provinceData?.bachelor || 0,
+              master: provinceData?.master || 0,
+              doctoral: provinceData?.doctoral || 0,
+              total: provinceData?.total || 0,
+              value: provinceData?.total || Math.round(Math.random() * 1000),
+              selected: false
+            }
+          })
+        } else {
+          mapData = prepareMapData(chinaMapJson)
+        }
         const option = createChartOption(mapData)
         chartInstance.value.setOption(option)
       }

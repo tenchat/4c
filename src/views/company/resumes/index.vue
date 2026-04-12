@@ -106,6 +106,9 @@
               <ElTag :type="getStatusType(item.status)" class="status-tag">
                 {{ getStatusText(item.status) }}
               </ElTag>
+              <div class="action-buttons">
+                <ElButton type="info" size="small" @click="handleView(item)">查看学生</ElButton>
+              </div>
               <div class="action-buttons" v-if="item.status === 0 || item.status === 1">
                 <ElButton
                   v-if="item.status === 0"
@@ -153,12 +156,160 @@
         </div>
       </div>
     </ElCard>
+
+    <!-- 学生详情弹窗 -->
+    <ElDialog v-model="showDetailDialog" title="学生档案详情" width="700px">
+      <div v-if="studentDetail" class="detail-grid">
+        <div class="detail-section">
+          <div class="detail-title">基本信息</div>
+          <div class="detail-row">
+            <span class="detail-label">学号</span>
+            <span class="detail-value">{{ studentDetail.student_no || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">姓名</span>
+            <span class="detail-value">{{ studentDetail.account?.real_name || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">学院</span>
+            <span class="detail-value">{{ studentDetail.college || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">专业</span>
+            <span class="detail-value">{{ studentDetail.major || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">学历</span>
+            <span class="detail-value">{{ degreeText(studentDetail.degree) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">毕业年份</span>
+            <span class="detail-value">{{ studentDetail.graduation_year || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">生源省份</span>
+            <span class="detail-value">{{ studentDetail.province_origin || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-title">账户信息</div>
+          <div v-if="studentDetail.account">
+            <div class="detail-row">
+              <span class="detail-label">用户名</span>
+              <span class="detail-value">{{ studentDetail.account.username }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">邮箱</span>
+              <span class="detail-value">{{ studentDetail.account.email || '-' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">手机</span>
+              <span class="detail-value">{{ studentDetail.account.phone || '-' }}</span>
+            </div>
+          </div>
+          <div v-else class="text-gray-400 text-sm">未注册，无账户信息</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-title">就业信息</div>
+          <div class="detail-row">
+            <span class="detail-label">当前公司</span>
+            <span class="detail-value">{{ studentDetail.cur_company || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">当前城市</span>
+            <span class="detail-value">{{ studentDetail.cur_city || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">当前行业</span>
+            <span class="detail-value">{{ studentDetail.cur_industry || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">当前薪资</span>
+            <span class="detail-value">
+              {{ studentDetail.cur_salary ? `${studentDetail.cur_salary}元/月` : '-' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-title">求职意向</div>
+          <div class="detail-row">
+            <span class="detail-label">期望城市</span>
+            <span class="detail-value">{{ studentDetail.desire_city || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">期望行业</span>
+            <span class="detail-value">{{ studentDetail.desire_industry || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">期望薪资</span>
+            <span class="detail-value">
+              {{
+                studentDetail.desire_salary_min || studentDetail.desire_salary_max
+                  ? `${studentDetail.desire_salary_min || '-'} ~ ${studentDetail.desire_salary_max || '-'} 元/月`
+                  : '-'
+              }}
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-title">其他信息</div>
+          <div class="detail-row">
+            <span class="detail-label">GPA</span>
+            <span class="detail-value">{{ studentDetail.gpa || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">技能特长</span>
+            <span class="detail-value">
+              <template v-if="studentDetail.skills && studentDetail.skills.length">
+                <ElTag v-for="s in studentDetail.skills" :key="s" size="small" class="mr-1">{{
+                  s
+                }}</ElTag>
+              </template>
+              <span v-else>-</span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">实习经历</span>
+            <span class="detail-value">{{ studentDetail.internship || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">简历</span>
+            <span class="detail-value">
+              <a
+                v-if="studentDetail.resume_url"
+                :href="studentDetail.resume_url"
+                target="_blank"
+                class="text-primary"
+              >
+                查看简历
+              </a>
+              <span v-else>-</span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">档案完整度</span>
+            <span class="detail-value">{{ studentDetail.profile_complete }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="detailLoading" class="text-center py-8 text-gray-400">加载中...</div>
+      <div v-else class="text-center py-8 text-gray-400">未找到该学生档案</div>
+
+      <template #footer>
+        <ElButton @click="showDetailDialog = false">关闭</ElButton>
+      </template>
+    </ElDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { fetchCompanyResumes, updateResumeStatus } from '@/api/company'
-  import { ElMessage, ElMessageBox } from 'element-plus'
+  import { fetchCompanyResumes, updateResumeStatus, fetchStudentByAccount } from '@/api/company'
+  import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
   import { Document, Filter, ChatDotRound, CircleClose, Clock } from '@element-plus/icons-vue'
 
   defineOptions({ name: 'CompanyResumes' })
@@ -181,6 +332,9 @@
   const loading = ref(false)
   const data = ref<ResumeItem[]>([])
   const filterStatus = ref<number | undefined>(undefined)
+  const showDetailDialog = ref(false)
+  const studentDetail = ref<any>(null)
+  const detailLoading = ref(false)
 
   const stats = reactive({
     total: 0,
@@ -213,8 +367,8 @@
     return map[status] || '未知'
   }
 
-  const getStatusType = (status: number) => {
-    const map: Record<number, string> = {
+  const getStatusType = (status: number): 'success' | 'warning' | 'info' | 'danger' | 'primary' => {
+    const map: Record<number, 'success' | 'warning' | 'info' | 'danger' | 'primary'> = {
       0: 'info',
       1: 'warning',
       2: 'primary',
@@ -322,6 +476,21 @@
   const handleCurrentChange = (current: number) => {
     pagination.current = current
     fetchResumes()
+  }
+
+  // 查看学生详情
+  const handleView = async (item: ResumeItem) => {
+    showDetailDialog.value = true
+    detailLoading.value = true
+    studentDetail.value = null
+    try {
+      const res: any = await fetchStudentByAccount(item.account_id)
+      studentDetail.value = res
+    } catch (e: any) {
+      ElMessage.error(e.message || '获取学生详情失败')
+    } finally {
+      detailLoading.value = false
+    }
   }
 
   onMounted(() => {
@@ -559,5 +728,45 @@
       justify-content: space-between;
       width: 100%;
     }
+  }
+
+  /* 学生详情弹窗样式 */
+  .detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .detail-section {
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .detail-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #303133;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .detail-row {
+    display: flex;
+    align-items: flex-start;
+    font-size: 13px;
+    line-height: 28px;
+  }
+
+  .detail-label {
+    color: #909399;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  .detail-value {
+    color: #303133;
+    word-break: break-all;
   }
 </style>

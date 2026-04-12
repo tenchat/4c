@@ -2,6 +2,15 @@ import request from '@/utils/http'
 
 export const fetchCompanyDashboard = () => request.get<any>({ url: '/api/v1/company/dashboard' })
 
+export const fetchEnterpriseDataboard = (year?: number) =>
+  request.get<any>({ url: '/api/v1/company/enterprise-databoard', params: year ? { year } : undefined })
+
+export const fetchEnterpriseWordCloud = () =>
+  request.get<any>({ url: '/api/v1/company/enterprise-databoard/word-cloud' })
+
+export const fetchEnterpriseJobTitles = () =>
+  request.get<any>({ url: '/api/v1/company/enterprise-databoard/job-titles' })
+
 export const fetchCompanyJobs = (params?: any) =>
   request.get<any>({ url: '/api/v1/company/jobs', params })
 
@@ -70,3 +79,6 @@ export const updateResumeStatus = (applicationId: string, status: number) =>
     url: `/api/v1/company/resumes/${applicationId}/status`,
     data: { status }
   })
+
+export const fetchStudentByAccount = (accountId: string) =>
+  request.get<any>({ url: `/api/v1/company/resumes/student/${accountId}` })

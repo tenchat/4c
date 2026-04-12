@@ -158,3 +158,77 @@ export const generateWarnings = (data: any) => {
     data
   })
 }
+
+// AI 简历优化（需要较长超时，因为涉及 LLM 调用）
+export const optimizeResume = (data: { resume_text: string; target_job: string }) => {
+  return request.post<any>({
+    url: '/api/v1/ai/resume/optimize',
+    data,
+    timeout: 60000 // 60秒超时，LLM 调用较慢
+  })
+}
+
+// 导出简历 PDF
+export const exportResumePdf = (resumeText: string) => {
+  return request.post<any>({
+    url: '/api/v1/ai/resume/export-pdf',
+    data: { resume_text: resumeText, target_job: '' },
+    responseType: 'blob',
+    timeout: 30000 // 30秒超时
+  })
+}
+
+// 解析简历文件（上传 PDF/Word）
+export const parseResumeFile = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return request.post<any>({
+    url: '/api/v1/ai/resume/parse-file',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 60000 // 60秒超时
+  })
+}
+
+// 面试准备助手
+export interface InterviewPrepRequest {
+  job_title: string
+  industry?: string
+  city?: string
+  major?: string
+  skills: string[]
+  internship?: string
+  degree?: number
+  salary_min?: number
+  salary_max?: number
+  interview_type: 'technical' | 'hr' | 'stress' | 'group'
+  interview_round: 'first' | 'second' | 'final'
+  company_type: 'large' | 'medium' | 'small' | 'foreign' | 'state'
+  action: 'generate_questions' | 'self_intro' | 'questions_to_ask' | 'salary_negotiation' | 'follow_up_email' | 'dressing_advice'
+}
+
+export const interviewPrep = (data: InterviewPrepRequest) => {
+  return request.post<any>({
+    url: '/api/v1/ai/interview-prep',
+    data,
+    timeout: 60000 // 60秒超时
+  })
+}
+
+// 模拟练习点评
+export interface PracticeReviewRequest {
+  question: string
+  user_answer: string
+  job_title: string
+}
+
+export const interviewPracticeReview = (data: PracticeReviewRequest) => {
+  return request.post<any>({
+    url: '/api/v1/ai/interview-practice-review',
+    data,
+    timeout: 60000 // 60秒超时
+  })
+}

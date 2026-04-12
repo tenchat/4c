@@ -42,6 +42,108 @@ async def dashboard(
     }
 
 
+@router.get("/enterprise-databoard")
+async def enterprise_databoard(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service),
+    year: int = Query(None, description="毕业年份筛选，如 2026")
+):
+    """企业数据大屏 - 平台级紧缺人才分析"""
+    data = await service.get_enterprise_databoard_data(year=year)
+    return {
+        "code": 200,
+        "message": "success",
+        "data": data
+    }
+
+
+@router.get("/enterprise-databoard/word-cloud")
+async def get_enterprise_word_cloud_data(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取企业端词云数据（从job_descriptions表提取title和keywords）"""
+    from sqlalchemy import select, func
+    from app.models.job import JobDescription
+    from collections import Counter
+    import json
+    import re
+
+    # 查询所有招聘中的岗位
+    result = await db.execute(
+        select(JobDescription).where(JobDescription.status == 1)
+    )
+    jobs = result.scalars().all()
+
+    word_counter = Counter()
+
+    for job in jobs:
+        # 处理title - 分割中文和英文单词
+        if job.title:
+            words = re.findall(r'[\u4e00-\u9fa5]+|[a-zA-Z]+', job.title)
+            for word in words:
+                if len(word) >= 2:
+                    word_counter[word] += 1
+
+        # 处理keywords - JSON数组
+        if job.keywords:
+            try:
+                if isinstance(job.keywords, str):
+                    kw_list = json.loads(job.keywords)
+                else:
+                    kw_list = job.keywords
+                for kw in kw_list:
+                    if kw and isinstance(kw, str):
+                        word_counter[kw.strip()] += 1
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    # 获取前50个高频词
+    top_words = word_counter.most_common(50)
+    word_cloud_data = [{"name": word, "value": count} for word, count in top_words]
+
+    return {"code": 200, "message": "success", "data": word_cloud_data}
+
+
+@router.get("/enterprise-databoard/job-titles")
+async def get_enterprise_job_titles_stats(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取热门岗位标题TOP10统计（从job_descriptions表提取）"""
+    from sqlalchemy import select, func
+    from app.models.job import JobDescription
+    from collections import Counter
+    import re
+
+    # 查询所有招聘中的岗位
+    result = await db.execute(
+        select(JobDescription).where(JobDescription.status == 1)
+    )
+    jobs = result.scalars().all()
+
+    # 统计岗位出现次数
+    title_counter = Counter()
+    for job in jobs:
+        if job.title:
+            title = job.title.strip()
+            for suffix in ['有限公司', '公司', '-', '—', '_']:
+                if suffix in title:
+                    title = title.split(suffix)[0].strip()
+            if title:
+                title_counter[title] += 1
+
+    # 获取TOP10
+    top_titles = title_counter.most_common(10)
+    data = [
+        {"title": title, "count": count}
+        for title, count in top_titles
+    ]
+
+    return {"code": 200, "message": "success", "data": data}
+
+
 @router.get("/jobs")
 async def get_jobs(
     payload: dict = Depends(get_current_user),
@@ -174,6 +276,23 @@ async def get_profile(
         "message": "success",
         "data": profile
     }
+
+
+@router.put("/profile")
+async def update_profile(
+    data: ProfileUpdateRequest,
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service)
+):
+    """更新企业档案（直接更新，无需审核）"""
+    company_id = await get_company_id(db, payload.get("sub"))
+
+    success = await service.update_profile(company_id, data.model_dump())
+    if not success:
+        raise HTTPException(status_code=404, detail="企业信息不存在")
+
+    return {"code": 200, "message": "保存成功"}
 
 
 @router.post("/profile/submit")
@@ -427,3 +546,62 @@ async def update_application_status(
 
     status_map = {0: "已投递", 1: "简历筛选", 2: "面试中", 3: "已录用", 4: "已拒绝"}
     return {"code": 200, "message": f"更新为{status_map.get(data.status, data.status)}"}
+
+
+@router.get("/resumes/student/{account_id}")
+async def get_student_profile_detail(
+    account_id: str,
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: CompanyService = Depends(get_company_service)
+):
+    """获取学生档案详情（企业端查看）"""
+    from sqlalchemy import select
+    from app.models.student import StudentProfile
+    from app.models.account import Account
+
+    # 获取学生账户信息
+    account_result = await db.execute(
+        select(Account).where(Account.account_id == account_id)
+    )
+    account = account_result.scalar_one_or_none()
+
+    # 获取学生档案信息
+    profile_result = await db.execute(
+        select(StudentProfile).where(StudentProfile.account_id == account_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="学生账户不存在")
+
+    # 构建返回数据
+    data = {
+        "account": {
+            "username": account.username,
+            "real_name": account.real_name,
+            "email": account.email,
+            "phone": account.phone,
+        } if account else None,
+        "student_no": profile.student_no if profile else None,
+        "college": profile.college if profile else None,
+        "major": profile.major if profile else None,
+        "degree": profile.degree if profile else None,
+        "graduation_year": profile.graduation_year if profile else None,
+        "province_origin": profile.province_origin if profile else None,
+        "cur_company": profile.cur_company if profile else None,
+        "cur_city": profile.cur_city if profile else None,
+        "cur_industry": profile.cur_industry if profile else None,
+        "cur_salary": profile.cur_salary if profile else None,
+        "desire_city": profile.desire_city if profile else None,
+        "desire_industry": profile.desire_industry if profile else None,
+        "desire_salary_min": profile.desire_salary_min if profile else None,
+        "desire_salary_max": profile.desire_salary_max if profile else None,
+        "gpa": profile.gpa if profile else None,
+        "skills": profile.skills if profile else None,
+        "internship": profile.internship if profile else None,
+        "resume_url": profile.resume_url if profile else None,
+        "profile_complete": profile.profile_complete if profile else 0,
+    }
+
+    return {"code": 200, "message": "success", "data": data}

@@ -13,6 +13,10 @@ class Company(Base, TimestampMixin):
     city = Column(String(50))
     size = Column(String(20))  # 规模：50人以下/50-200人等
     description = Column(Text)
+    address = Column(String(255))
+    email = Column(String(100))
+    contact = Column(String(50))
+    contact_phone = Column(String(20))
     verified = Column(Boolean, nullable=False, default=False, index=True)  # 管理员审核，已添加索引
 
     activities = relationship("CompanyActivity", back_populates="company", cascade="all, delete-orphan")

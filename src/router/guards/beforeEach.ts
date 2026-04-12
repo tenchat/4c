@@ -401,13 +401,9 @@ function handleRootPathRedirect(to: RouteLocationNormalized, next: NavigationGua
     return false
   }
 
-  const { homePath } = useCommon()
-  if (homePath.value && homePath.value !== '/') {
-    next({ path: homePath.value, replace: true })
-    return true
-  }
-
-  return false
+  // 根路径始终重定向到 showcase 展示页
+  next({ path: '/showcase', replace: true })
+  return true
 }
 
 /**

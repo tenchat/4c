@@ -11,6 +11,17 @@ import { AppRouteRecordRaw } from '@/utils/router'
  * 2、静态路由不管是否登录都可以访问
  */
 export const staticRoutes: AppRouteRecordRaw[] = [
+  // 根路径重定向到 showcase 页面
+  {
+    path: '/',
+    redirect: '/showcase'
+  },
+  {
+    path: '/showcase',
+    name: 'Showcase',
+    component: () => import('@views/showcase/index.vue'),
+    meta: { title: '平台介绍', isHideTab: true }
+  },
   // 不需要登录就能访问的路由示例
   // {
   //   path: '/welcome',

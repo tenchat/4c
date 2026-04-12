@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_current_user_id
@@ -16,7 +17,15 @@ def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     try:
-        account = await service.register(req.username, req.password, req.real_name or "", req.role)
+        account = await service.register(
+            username=req.username,
+            password=req.password,
+            role=req.role,
+            student_no=req.student_no,
+            real_name=req.real_name,
+            enterprise_name=req.enterprise_name,
+            registration_code=req.registration_code,
+        )
         return {"code": 201, "message": "注册成功", "data": {
             "account_id": account.account_id,
             "username": account.username,
@@ -62,6 +71,28 @@ async def get_me(
     if not result:
         raise HTTPException(status_code=404, detail="用户不存在")
     return {"code": 200, "message": "success", "data": result}
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    req: ChangePasswordRequest,
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """修改当前用户密码"""
+    service = AuthService(db)
+    try:
+        success = await service.change_password(payload.get("sub"), req.old_password, req.new_password)
+        if not success:
+            raise HTTPException(status_code=400, detail="旧密码错误")
+        return {"code": 200, "message": "密码修改成功"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/refresh")

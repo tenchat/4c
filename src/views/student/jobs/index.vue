@@ -9,7 +9,7 @@
             <ElIcon><Briefcase /></ElIcon>
           </div>
           <div class="stat-content">
-            <span class="stat-value">{{ pagination.total }}</span>
+            <span class="stat-value">{{ total }}</span>
             <span class="stat-label">在招职位</span>
           </div>
         </div>
@@ -31,8 +31,8 @@
             <ElIcon><TrendCharts /></ElIcon>
           </div>
           <div class="stat-content">
-            <span class="stat-value">{{ viewedCount }}</span>
-            <span class="stat-label">薪资最高</span>
+            <span class="stat-value">{{ maxSalary > 0 ? `${maxSalary / 1000}k` : '--' }}</span>
+            <span class="stat-label">最高薪资</span>
           </div>
         </div>
       </ElCol>
@@ -67,8 +67,11 @@
 
           <ElSelect
             v-model="searchForm.city"
-            placeholder="选择城市"
+            placeholder="选择或输入城市"
             class="filter-select"
+            filterable
+            allow-create
+            default-first-option
             clearable
           >
             <ElOption label="北京" value="北京" />
@@ -79,6 +82,22 @@
             <ElOption label="成都" value="成都" />
             <ElOption label="武汉" value="武汉" />
             <ElOption label="西安" value="西安" />
+            <ElOption label="重庆" value="重庆" />
+            <ElOption label="南京" value="南京" />
+            <ElOption label="苏州" value="苏州" />
+            <ElOption label="天津" value="天津" />
+            <ElOption label="长沙" value="长沙" />
+            <ElOption label="郑州" value="郑州" />
+            <ElOption label="东莞" value="东莞" />
+            <ElOption label="佛山" value="佛山" />
+            <ElOption label="宁波" value="宁波" />
+            <ElOption label="青岛" value="青岛" />
+            <ElOption label="沈阳" value="沈阳" />
+            <ElOption label="大连" value="大连" />
+            <ElOption label="厦门" value="厦门" />
+            <ElOption label="福州" value="福州" />
+            <ElOption label="济南" value="济南" />
+            <ElOption label="哈尔滨" value="哈尔滨" />
           </ElSelect>
 
           <ElSelect
@@ -96,6 +115,7 @@
           </ElSelect>
 
           <ElSelect v-model="salaryRange" placeholder="薪资范围" class="filter-select" clearable>
+            <ElOption label="面议" value="0-0" />
             <ElOption label="5k以下" value="0-5000" />
             <ElOption label="5k-10k" value="5000-10000" />
             <ElOption label="10k-20k" value="10000-20000" />
@@ -112,6 +132,10 @@
             <ElIcon><RefreshLeft /></ElIcon>
             重置
           </ElButton>
+          <ElButton type="success" @click="handleAIRecommend">
+            <ElIcon><MagicStick /></ElIcon>
+            AI智能推荐
+          </ElButton>
         </div>
       </div>
     </ElCard>
@@ -120,7 +144,7 @@
     <div class="list-header mb-4">
       <div class="result-info">
         <span class="result-text">
-          共找到 <span class="highlight">{{ pagination.total }}</span> 个职位
+          共找到 <span class="highlight">{{ total }}</span> 个职位
         </span>
       </div>
       <div class="sort-info">
@@ -189,11 +213,11 @@
       </ElRow>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper mt-6" v-if="pagination.total > 0">
+      <div class="pagination-wrapper mt-6" v-if="total > 0">
         <ElPagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="total"
           :page-sizes="[12, 24, 36, 48]"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
@@ -283,7 +307,7 @@
             <ElTag
               v-for="(kw, idx) in currentJob.keywords"
               :key="idx"
-              :type="['primary', 'success', 'warning'][idx % 3]"
+              :type="(['primary', 'success', 'warning'] as const)[idx % 3]"
               class="keyword-tag"
             >
               {{ kw }}
@@ -322,11 +346,116 @@
         </div>
       </template>
     </ElDrawer>
+
+    <!-- AI智能推荐弹窗 -->
+    <ElDialog v-model="recommendDialogVisible" title="AI智能推荐" width="720px" :close-on-click-modal="false">
+      <template #header>
+        <span>AI智能推荐</span>
+        <el-link type="primary" class="rules-link" @click="showRulesDialog = true">推荐规则</el-link>
+      </template>
+      <div v-loading="recommendLoading">
+        <ElEmpty v-if="!recommendations.length" description="暂未找到合适的推荐，请先完善您的简历信息" />
+        <div v-else class="recommend-list">
+          <div v-for="item in recommendations" :key="item.job_id" class="recommend-card">
+            <div class="recommend-content">
+              <div class="recommend-header">
+                <h4 class="recommend-title">{{ item.title }}</h4>
+                <ElTag type="success">{{ (item.match_score * 100).toFixed(0) }}% 匹配</ElTag>
+              </div>
+              <p class="recommend-company">
+                <ElIcon><OfficeBuilding /></ElIcon>
+                {{ item.company_name }}
+              </p>
+              <p class="recommend-meta">
+                <ElIcon><Location /></ElIcon>
+                {{ item.city }}
+                <span class="salary-range">{{ item.min_salary === 0 && item.max_salary === 0 ? '面议' : `${item.min_salary}-${item.max_salary}元/月` }}</span>
+              </p>
+              <div class="recommend-reason" v-if="item.description">
+                <p class="reason-label">推荐理由：</p>
+                <p class="reason-text">{{ item.description.substring(0, 100) }}{{ item.description.length > 100 ? '...' : '' }}</p>
+              </div>
+              <div class="recommend-actions">
+                <ElButton size="small" type="primary" @click="handleViewRecommendJob(item)">查看详情</ElButton>
+                <ElButton size="small" @click="handleApply(item as any)">投递简历</ElButton>
+              </div>
+            </div>
+            <div class="recommend-radar">
+              <ArtRadarChart
+                :data="getRadarData(item)"
+                :indicator="radarIndicator"
+                :showTooltip="true"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </ElDialog>
+
+    <!-- 推荐规则说明弹窗 -->
+    <ElDialog v-model="showRulesDialog" title="推荐规则说明" width="500px">
+      <div class="rules-content">
+        <p class="rules-title">匹配度计算方式</p>
+        <p class="rules-formula">综合匹配度 = 向量相似度×30% + 城市匹配×20% + 行业匹配×20% + 薪资匹配×15% + 学历匹配×10% + 技能匹配×5%</p>
+
+        <div class="rules-detail">
+          <div class="rule-item">
+            <span class="rule-icon">🔍</span>
+            <div class="rule-info">
+              <span class="rule-name">向量相似度 (30%)</span>
+              <span class="rule-desc">基于您的简历信息（专业、技能、期望城市等）与岗位描述的语义匹配程度</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">📍</span>
+            <div class="rule-info">
+              <span class="rule-name">城市匹配 (20%)</span>
+              <span class="rule-desc">您的期望城市与岗位所在城市匹配时得满分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">💼</span>
+            <div class="rule-info">
+              <span class="rule-name">行业匹配 (20%)</span>
+              <span class="rule-desc">您的期望行业与岗位所属行业匹配时得满分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">💰</span>
+            <div class="rule-info">
+              <span class="rule-name">薪资匹配 (15%)</span>
+              <span class="rule-desc">岗位薪资在您期望薪资范围内时得高分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🎓</span>
+            <div class="rule-info">
+              <span class="rule-name">学历匹配 (10%)</span>
+              <span class="rule-desc">您的学历不低于岗位要求时得满分</span>
+            </div>
+          </div>
+
+          <div class="rule-item">
+            <span class="rule-icon">🛠️</span>
+            <div class="rule-info">
+              <span class="rule-name">技能匹配 (5%)</span>
+              <span class="rule-desc">您的技能与岗位要求关键词的重合度</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="rules-tip">建议：完善您的简历信息（专业、期望城市、期望行业、期望薪资、技能等）可获得更精准的推荐结果</p>
+      </div>
+    </ElDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { fetchStudentJobs, applyForJob } from '@/api/student'
+  import { fetchStudentJobs, applyForJob, getJobRecommendations, fetchJobStatistics, type JobRecommendation } from '@/api/student'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import {
     Search,
@@ -343,9 +472,11 @@
     Collection,
     Reading,
     Clock,
-    Position
+    Position,
+    MagicStick
   } from '@element-plus/icons-vue'
   import ArtJobCard from '@/components/core/cards/art-job-card/index.vue'
+  import ArtRadarChart from '@/components/core/charts/art-radar-chart/index.vue'
 
   defineOptions({ name: 'StudentJobs' })
 
@@ -370,7 +501,7 @@
   const loading = ref(false)
   const data = ref<JobItem[]>([])
   const appliedCount = ref(0)
-  const viewedCount = ref(0)
+  const maxSalary = ref(0)
   const newJobCount = ref(0)
 
   const searchForm = ref({
@@ -383,17 +514,20 @@
 
   const salaryRange = ref('')
 
-  const pagination = reactive({
-    current: 1,
-    size: 12,
-    total: 0
-  })
+  const currentPage = ref(1)
+  const pageSize = ref(12)
+  const total = ref(0)
 
   const sortField = ref('default')
   const sortLabel = ref('默认排序')
 
   const drawerVisible = ref(false)
   const currentJob = ref<JobItem | null>(null)
+
+  const recommendDialogVisible = ref(false)
+  const recommendations = ref<JobRecommendation[]>([])
+  const recommendLoading = ref(false)
+  const showRulesDialog = ref(false)
 
   const INDUSTRY_OPTIONS = [
     { label: '互联网/IT', value: 'internet' },
@@ -407,6 +541,7 @@
   ]
 
   const INDUSTRY_MAP: Record<string, string> = {
+    // 英文key (job_descriptions表)
     internet: '互联网/IT',
     finance: '金融',
     education: '教育',
@@ -414,7 +549,46 @@
     real_estate: '房地产',
     healthcare: '医疗健康',
     government: '政府/事业单位',
-    other: '其他'
+    other: '其他',
+    // 中文raw值 (学生表cur_industry/desire_industry原始值)
+    '互联网': '互联网/IT',
+    '金融/银行': '金融/银行',
+    '教育培训': '教育培训',
+    '房地产/建筑': '房地产/建筑',
+    '医药生物': '医药生物',
+    '政府/公共事业': '政府/公共事业',
+    '计算机软件': '计算机软件',
+    '电子/半导体': '电子/半导体',
+    '化工': '化工',
+    '机械/装备制造': '机械/装备制造',
+    '汽车/交通设备': '汽车/交通设备',
+    '通信/网络设备': '通信/网络设备',
+    '电力/能源': '电力/能源',
+    '新材料': '新材料',
+    '航空航天': '航空航天',
+    '现代农业': '现代农业',
+    '批发/零售': '批发/零售',
+    '文化/传媒': '文化/传媒',
+    '保险': '保险',
+    '环保': '环保',
+    // 归一化后的中文行业 (dashboard雷达图，来自backend normalize_industry)
+    '人工智能': '人工智能',
+    '金融': '金融',
+    '制造业': '制造业',
+    '互联网': '互联网',
+    '医疗健康': '医疗健康',
+    '教育': '教育',
+    '房地产': '房地产',
+    '交通运输': '交通运输',
+    '能源': '能源',
+    '文化传媒': '文化传媒',
+    '电子信息': '电子信息',
+    '建筑': '建筑',
+    '法律': '法律',
+    '消费零售': '消费零售',
+    '农林牧渔': '农林牧渔',
+    '军工': '军工',
+    '其他': '其他',
   }
 
   const industryText = (val?: string) => INDUSTRY_MAP[val || ''] || val || ''
@@ -439,6 +613,47 @@
     return `${min || 0}~${max || 0}`
   }
 
+  // 雷达图配置
+  const radarIndicator = [
+    { name: '综合评分', max: 100 },
+    { name: '城市匹配', max: 100 },
+    { name: '行业匹配', max: 100 },
+    { name: '薪资匹配', max: 100 },
+    { name: '学历要求', max: 100 }
+  ]
+
+  // 根据推荐岗位生成雷达图数据
+  const getRadarData = (item: JobRecommendation) => {
+    // 使用后端返回的真实细分分数
+    const overallScore = Math.round((item.match_score || 0) * 100)
+    const cityScore = item.city_score ?? 50
+    const industryScore = item.industry_score ?? 50
+    const salaryScore = item.salary_score ?? 50
+    const degreeScore = item.degree_score ?? 50
+
+    return [
+      {
+        name: '综合评分',
+        value: [overallScore, cityScore, industryScore, salaryScore, degreeScore]
+      }
+    ]
+  }
+
+  // 加载统计数据
+  const loadStatistics = async () => {
+    try {
+      const stats: any = await fetchJobStatistics()
+      if (stats) {
+        appliedCount.value = stats.applied_count || 0
+        maxSalary.value = stats.max_salary || 0
+        newJobCount.value = stats.new_jobs || 0
+        total.value = stats.total_jobs || 0
+      }
+    } catch (error) {
+      console.error('加载统计数据失败:', error)
+    }
+  }
+
   const handleSortCommand = (command: string) => {
     sortField.value = command
     const sortMap: Record<string, string> = {
@@ -454,21 +669,26 @@
   const fetchJobs = async () => {
     loading.value = true
     try {
-      // 处理薪资范围
-      if (salaryRange.value) {
-        const [min, max] = salaryRange.value.split('-').map(Number)
-        searchForm.value.min_salary = min
-        searchForm.value.max_salary = max === 999999 ? undefined : max
-      } else {
-        searchForm.value.min_salary = undefined
-        searchForm.value.max_salary = undefined
+      // 构建请求参数，过滤掉 undefined 值
+      const params: any = {
+        page: currentPage.value,
+        page_size: pageSize.value
       }
+      if (searchForm.value.keyword) params.keyword = searchForm.value.keyword
+      if (searchForm.value.city) params.city = searchForm.value.city
+      if (searchForm.value.industry) params.industry = searchForm.value.industry
+      // 薪资筛选
+      if (salaryRange.value === '0-0') {
+        params.min_salary = 0
+        params.max_salary = 0
+      } else if (salaryRange.value) {
+        const [min, max] = salaryRange.value.split('-').map(Number)
+        params.min_salary = min
+        if (max !== 999999) params.max_salary = max
+      }
+      // 注意：不传 min_salary/max_salary 表示不筛选薪资
 
-      const res: any = await fetchStudentJobs({
-        ...searchForm.value,
-        page: pagination.current,
-        page_size: pagination.size
-      })
+      const res: any = await fetchStudentJobs(params)
 
       if (res) {
         // 按排序字段处理数据
@@ -485,7 +705,7 @@
         }
 
         data.value = list
-        pagination.total = res.total || 0
+        total.value = res.total || 0
 
         // 更新统计
         newJobCount.value = list.filter((j: JobItem) => {
@@ -502,7 +722,7 @@
   }
 
   const handleSearch = () => {
-    pagination.current = 1
+    currentPage.value = 1
     fetchJobs()
   }
 
@@ -517,18 +737,18 @@
     salaryRange.value = ''
     sortField.value = 'default'
     sortLabel.value = '默认排序'
-    pagination.current = 1
+    currentPage.value = 1
     fetchJobs()
   }
 
   const handleSizeChange = (size: number) => {
-    pagination.size = size
-    pagination.current = 1
+    pageSize.value = size
+    currentPage.value = 1
     fetchJobs()
   }
 
   const handleCurrentChange = (current: number) => {
-    pagination.current = current
+    currentPage.value = current
     fetchJobs()
   }
 
@@ -564,7 +784,43 @@
     }
   }
 
+  const handleAIRecommend = async () => {
+    recommendDialogVisible.value = true
+    recommendLoading.value = true
+    try {
+      const res: any = await getJobRecommendations(6)
+      recommendations.value = res?.recommendations || []
+    } catch (e) {
+      console.error('获取推荐失败', e)
+      ElMessage.error('获取推荐失败')
+    } finally {
+      recommendLoading.value = false
+    }
+  }
+
+  const handleViewRecommendJob = (item: JobRecommendation) => {
+    const job: JobItem = {
+      job_id: item.job_id,
+      title: item.title,
+      company_name: item.company_name,
+      city: item.city,
+      province: item.province,
+      industry: item.industry,
+      min_salary: item.min_salary,
+      max_salary: item.max_salary,
+      keywords: typeof item.keywords === 'string' ? item.keywords.split(',') : (item.keywords || []),
+      status: 1,
+      published_at: '',
+      expired_at: '',
+      min_degree: 1,
+      min_exp_years: 0,
+      description: item.description || ''
+    }
+    handleViewJob(job)
+  }
+
   onMounted(() => {
+    loadStatistics()
     fetchJobs()
   })
 </script>
@@ -890,5 +1146,175 @@
     font-weight: 500;
     color: var(--el-color-primary);
     background: var(--el-color-primary-light-9);
+  }
+
+  /* AI智能推荐弹窗样式 */
+  .recommend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+
+  .recommend-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--el-fill-color-lightest);
+    border: 1px solid var(--el-border-color-extra-light);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+
+  .recommend-card:hover {
+    border-color: var(--el-color-primary-light-5);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
+  }
+
+  .recommend-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .recommend-radar {
+    width: 200px;
+    flex-shrink: 0;
+  }
+
+  .recommend-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .recommend-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .recommend-company {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .recommend-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .salary-range {
+    margin-left: 12px;
+    font-weight: 500;
+    color: var(--el-color-danger);
+  }
+
+  .recommend-reason {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--el-bg-color);
+    border-radius: 8px;
+  }
+
+  .reason-label {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-regular);
+  }
+
+  .reason-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
+  }
+
+  .recommend-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* 推荐规则弹窗样式 */
+  .rules-link {
+    margin-left: auto;
+    font-size: 13px;
+  }
+
+  .rules-content {
+    padding: 8px 0;
+  }
+
+  .rules-title {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .rules-formula {
+    margin: 0 0 16px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--el-color-primary);
+    background: var(--el-fill-color-light);
+    border-radius: 6px;
+  }
+
+  .rules-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .rule-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .rule-icon {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  .rule-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .rule-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+
+  .rule-desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .rules-tip {
+    margin: 0;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    background: var(--el-color-primary-light-9);
+    border-radius: 6px;
   }
 </style>

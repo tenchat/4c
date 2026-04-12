@@ -97,7 +97,11 @@
         <art-card-banner title="企业审核" description="审核注册企业账号">
           <el-table :data="pendingCompanies" style="width: 100%">
             <el-table-column prop="company_name" label="企业名称" />
-            <el-table-column prop="industry" label="行业" />
+            <el-table-column prop="industry" label="行业">
+                <template #default="{ row }">
+                  {{ INDUSTRY_MAP[row.industry] || row.industry || '-' }}
+                </template>
+              </el-table-column>
             <el-table-column prop="created_at" label="申请时间" width="180" />
             <el-table-column label="操作" width="150">
               <template #default="{ row }">
@@ -125,7 +129,11 @@
           <el-table :data="scarceTalents" style="width: 100%">
             <el-table-column prop="province" label="省份" width="120" />
             <el-table-column prop="job_type" label="岗位类型" />
-            <el-table-column prop="industry" label="行业" width="120" />
+            <el-table-column prop="industry" label="行业" width="120">
+                <template #default="{ row }">
+                  {{ INDUSTRY_MAP[row.industry] || row.industry || '-' }}
+                </template>
+              </el-table-column>
             <el-table-column prop="shortage_level" label="紧缺程度" width="120">
               <template #default="{ row }">
                 <el-tag
@@ -206,6 +214,42 @@
   const pendingCompanies = ref<Company[]>([])
   const scarceTalents = ref<ScarceTalent[]>([])
   const statsEnterprise = ref<Record<string, number>>({})
+
+  const INDUSTRY_MAP: Record<string, string> = {
+    // 英文key (企业表)
+    internet: '互联网/IT',
+    finance: '金融',
+    education: '教育',
+    manufacturing: '制造业',
+    real_estate: '房地产',
+    healthcare: '医疗健康',
+    government: '政府/事业单位',
+    other: '其他',
+    // 中文值 (学生表cur_industry)
+    '互联网': '互联网/IT',
+    '金融/银行': '金融/银行',
+    '教育培训': '教育培训',
+    '房地产/建筑': '房地产/建筑',
+    '医药生物': '医药生物',
+    '政府/公共事业': '政府/公共事业',
+    '计算机软件': '计算机软件',
+    '电子/半导体': '电子/半导体',
+    '化工': '化工',
+    '机械/装备制造': '机械/装备制造',
+    '汽车/交通设备': '汽车/交通设备',
+    '通信/网络设备': '通信/网络设备',
+    '电力/能源': '电力/能源',
+    '新材料': '新材料',
+    '航空航天': '航空航天',
+    '现代农业': '现代农业',
+    '批发/零售': '批发/零售',
+    '文化/传媒': '文化/传媒',
+    '保险': '保险',
+    '环保': '环保',
+    // desire_industry 混合值
+    '金融': '金融',
+    '互联网/IT': '互联网/IT',
+  }
 
   const enterpriseStatsConfig = [
     {

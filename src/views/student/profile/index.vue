@@ -1,59 +1,60 @@
 <!-- 学生档案管理页面 -->
 <template>
   <div class="page-student-profile art-full-height">
-    <ElCard class="art-card-xs">
-      <template #header>
-        <div class="flex justify-between items-center">
-          <span class="text-lg font-medium">个人信息</span>
-          <ElProgress
-            v-if="profileCompleteness > 0"
-            :percentage="profileCompleteness"
-            :color="progressColor"
-            style="width: 200px"
-          />
-        </div>
-      </template>
+    <ElRow :gutter="16">
+      <!-- 左侧：个人信息表单 -->
+      <ElCol :xs="24" :sm="24" :md="resumeText ? 12 : 24" class="mb-4">
+        <ElCard class="art-card-xs">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <span class="text-lg font-medium">个人信息</span>
+              <ElProgress
+                v-if="profileCompleteness > 0"
+                :percentage="profileCompleteness"
+                :color="progressColor"
+                style="width: 200px"
+              />
+            </div>
+          </template>
 
-      <ArtForm
-        ref="formRef"
-        v-model="formData"
-        :items="formItems"
-        :rules="formRules"
-        :labelWidth="labelWidth"
-        :span="span"
-        @submit="handleSubmit"
-        @reset="handleReset"
-      >
-        <template #skillTags>
-          <div class="skill-tags-wrapper">
-            <ElTag
-              v-for="tag in formData.skillTags"
-              :key="tag"
-              closable
-              :disableTransitions="false"
-              @close="handleCloseTag(tag)"
-            >
-              {{ tag }}
-            </ElTag>
-            <ElInput
-              v-if="tagInputVisible"
-              ref="tagInputRef"
-              v-model="tagInputValue"
-              class="input-new-tag"
-              size="small"
-              @keyup.enter="handleInputConfirm"
-              @blur="handleInputConfirm"
-              placeholder="输入技能后回车"
-            />
-            <ElButton v-else class="button-new-tag" size="small" @click="showTagInput">
-              + 添加技能
-            </ElButton>
-          </div>
-        </template>
+          <ArtForm
+            ref="formRef"
+            v-model="formData"
+            :items="formItems"
+            :rules="formRules"
+            :labelWidth="labelWidth"
+            :span="span"
+            @submit="handleSubmit"
+            @reset="handleReset"
+          >
+            <template #skillTags>
+              <div class="skill-tags-wrapper">
+                <ElTag
+                  v-for="tag in formData.skillTags"
+                  :key="tag"
+                  closable
+                  :disableTransitions="false"
+                  @close="handleCloseTag(tag)"
+                >
+                  {{ tag }}
+                </ElTag>
+                <ElInput
+                  v-if="tagInputVisible"
+                  ref="tagInputRef"
+                  v-model="tagInputValue"
+                  class="input-new-tag"
+                  size="small"
+                  @keyup.enter="handleInputConfirm"
+                  @blur="handleInputConfirm"
+                  placeholder="输入技能后回车"
+                />
+                <ElButton v-else class="button-new-tag" size="small" @click="showTagInput">
+                  + 添加技能
+                </ElButton>
+              </div>
+            </template>
 
-        <template #resumeUpload>
-          <div class="resume-section">
-            <div class="resume-upload-row">
+            <template #resumeUpload>
               <ElUpload
                 ref="uploadRef"
                 class="resume-upload"
@@ -62,46 +63,58 @@
                 :file-list="resumeFileList"
                 :on-change="handleResumeChange"
                 :on-remove="handleResumeRemove"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf,.doc,.docx,.txt"
               >
-                <ElButton type="primary">上传简历</ElButton>
+                <ElButton type="primary" :loading="resumeUploading">上传并解析</ElButton>
                 <template #tip>
-                  <div class="el-upload__tip">支持 PDF、Word 格式文件，大小不超过 5MB</div>
+                  <div class="el-upload__tip">支持 PDF、Word、TXT 格式，大小不超过 10MB</div>
                 </template>
               </ElUpload>
-              <ElButton v-if="resumeUrl" type="success" plain @click="handleDownloadResume">
-                <ElIcon><Download /></ElIcon>
-                下载简历
-              </ElButton>
-            </div>
-            <!-- 简历文本预览 -->
-            <div v-if="resumeText" class="resume-text-preview">
-              <div class="resume-text-header">
-                <ElIcon><Document /></ElIcon>
-                <span>简历文本预览</span>
-              </div>
-              <div class="resume-text-content">{{ resumeText }}</div>
-            </div>
-          </div>
-        </template>
-      </ArtForm>
-    </ElCard>
+            </template>
+          </ArtForm>
+        </ElCard>
 
-    <div class="mt-4 text-right">
-      <ElSpace>
-        <ElButton @click="handleReset">重置</ElButton>
-        <ElButton type="primary" :loading="submitLoading" @click="handleSave">保存档案</ElButton>
-      </ElSpace>
-    </div>
+        <div class="mt-4 text-right">
+          <ElSpace>
+            <ElButton @click="handleReset">重置</ElButton>
+            <ElButton type="primary" :loading="submitLoading" @click="handleSave">
+              保存档案
+            </ElButton>
+          </ElSpace>
+        </div>
+      </ElCol>
+
+      <!-- 右侧：简历文本预览（有内容时才显示） -->
+      <ElCol v-if="resumeText" :xs="24" :sm="24" :md="12" class="mb-4">
+        <ElCard class="art-card-xs resume-preview-card">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <span class="text-lg font-medium">简历内容预览</span>
+              <ElSpace>
+                <ElButton size="small" @click="downloadResume">下载</ElButton>
+                <ElButton size="small" @click="resumeText = ''">清空</ElButton>
+              </ElSpace>
+            </div>
+          </template>
+          <ElScrollbar height="500px">
+            <ElInput
+              v-model="resumeText"
+              type="textarea"
+              :rows="20"
+              placeholder="简历文本将显示在这里..."
+              readonly
+            />
+          </ElScrollbar>
+        </ElCard>
+      </ElCol>
+    </ElRow>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { fetchStudentProfile, updateStudentProfile, uploadResume, downloadResume } from '@/api/student'
-
+  import { fetchStudentProfile, updateStudentProfile, uploadResume, getResumeText, deleteResume } from '@/api/student'
   import { ElMessage } from 'element-plus'
-  import { Download, Document } from '@element-plus/icons-vue'
-  import type { FormInstance, FormRules, UploadFile } from 'element-plus'
+  import type { FormInstance, FormRules, UploadFile, UploadRawFile } from 'element-plus'
 
   defineOptions({ name: 'StudentProfile' })
 
@@ -123,14 +136,14 @@
 
   const formRef = ref<FormInstance>()
   const submitLoading = ref(false)
-  const uploadLoading = ref(false)
   const profileCompleteness = ref(0)
   const tagInputVisible = ref(false)
   const tagInputValue = ref('')
   const tagInputRef = ref<HTMLInputElement>()
   const resumeFileList = ref<UploadFile[]>([])
-  const resumeUrl = ref('')
   const resumeText = ref('')
+  const resumeUploading = ref(false)
+  const uploadRef = ref()
 
   const labelWidth = '120px'
   const span = 12
@@ -224,7 +237,20 @@
       key: 'expectedCity',
       label: '期望城市',
       type: 'input' as const,
+      span: 12,
       props: { placeholder: '请输入期望工作城市', clearable: true }
+    },
+    {
+      key: 'minSalary',
+      label: '期望薪资范围',
+      type: 'number' as const,
+      props: { placeholder: '最低薪资(元/月)', min: 0, step: 1000 }
+    },
+    {
+      key: 'maxSalary',
+      label: '~',
+      type: 'number' as const,
+      props: { placeholder: '最高薪资(元/月)', min: 0, step: 1000 }
     },
     {
       key: 'expectedIndustry',
@@ -232,25 +258,6 @@
       type: 'select' as const,
       span: 12,
       props: { placeholder: '请选择期望行业', options: INDUSTRY_OPTIONS }
-    },
-    {
-      key: 'salaryRange',
-      label: '期望薪资范围',
-      span: 24
-    },
-    {
-      key: 'minSalary',
-      label: '最低薪资',
-      type: 'number' as const,
-      span: 6,
-      props: { placeholder: '最低薪资(元/月)', min: 0 }
-    },
-    {
-      key: 'maxSalary',
-      label: '最高薪资',
-      type: 'number' as const,
-      span: 6,
-      props: { placeholder: '最高薪资(元/月)', min: 0 }
     },
     {
       key: 'skillTags',
@@ -296,64 +303,100 @@
   const handleResumeChange = async (file: UploadFile, fileList: UploadFile[]) => {
     resumeFileList.value = fileList.slice(-1)
 
-    // Auto upload when file is selected
-    if (file.raw) {
-      await handleUploadResume(file.raw)
+    // 如果有文件，自动上传并解析
+    const rawFile = file.raw
+    if (rawFile) {
+      await handleResumeUpload(rawFile)
     }
   }
 
-  const handleResumeRemove = () => {
-    resumeFileList.value = []
-    resumeUrl.value = ''
-    resumeText.value = ''
-  }
+  const handleResumeUpload = async (file: UploadRawFile) => {
+    // 验证文件大小 (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      ElMessage.error('文件超过 10MB 限制')
+      resumeFileList.value = []
+      return
+    }
 
-  const handleUploadResume = async (file: File) => {
+    // 验证文件类型
+    const allowedTypes = ['.pdf', '.docx', '.doc', '.txt']
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+    if (!allowedTypes.includes(ext)) {
+      ElMessage.error(`不支持的文件格式: ${ext}。支持的格式: ${allowedTypes.join(', ')}`)
+      resumeFileList.value = []
+      return
+    }
+
     try {
-      uploadLoading.value = true
+      resumeUploading.value = true
       const res: any = await uploadResume(file)
-      if (res.code === 200) {
-        resumeUrl.value = res.data.resume_url
-        resumeText.value = res.data.resume_text
-        ElMessage.success('简历上传成功')
+
+      // uploadResume 返回的是 {file_path, file_name, text, char_count}
+      if (res && res.text !== undefined) {
+        resumeText.value = res.text || ''
+        formData.value.resumeUrl = res.file_path
+        ElMessage.success('简历上传并解析成功')
+      } else {
+        ElMessage.error('上传失败，未获取到解析结果')
+        resumeFileList.value = []
       }
-    } catch (error) {
-      console.error('上传简历失败:', error)
-      ElMessage.error('上传简历失败')
+    } catch (error: any) {
+      console.error('简历上传失败:', error)
+      ElMessage.error(error?.message || '上传失败，请重试')
+      resumeFileList.value = []
     } finally {
-      uploadLoading.value = false
+      resumeUploading.value = false
     }
   }
 
-  const handleDownloadResume = () => {
-    if (resumeUrl.value) {
-      window.open(downloadResume(resumeUrl.value), '_blank')
+  const downloadResume = async () => {
+    if (!formData.value.resumeUrl) return
+    const baseUrl = import.meta.env.VITE_API_BASE_URL
+    const { useUserStore } = await import('@/store/modules/user')
+    const token = useUserStore().accessToken
+    if (!token) return ElMessage.error('未登录')
+
+    const fullUrl = `${baseUrl}/api/v1/student/resume/download?file_path=${encodeURIComponent(formData.value.resumeUrl)}`
+
+    try {
+      const res = await fetch(fullUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('下载失败')
+      const blob = await res.blob()
+      const filename = formData.value.resumeUrl.split('/').pop() || 'resume'
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      ElMessage.error(e.message || '下载失败')
     }
   }
 
-  const calculateCompleteness = (data: StudentProfile): number => {
-    let filled = 0
-    const total = 11
-
-    if (data.name) filled++
-    if (data.studentId) filled++
-    if (data.college) filled++
-    if (data.major) filled++
-    if (data.degree !== undefined) filled++
-    if (data.hometown) filled++
-    if (data.gpa !== undefined) filled++
-    if (data.expectedCity) filled++
-    if (data.expectedIndustry) filled++
-    if (data.minSalary !== undefined && data.maxSalary !== undefined) filled++
-    if (data.skillTags.length > 0) filled++
-
-    return Math.round((filled / total) * 100)
+  const handleResumeRemove = async () => {
+    const filePath = formData.value.resumeUrl
+    // 调用后端删除本地文件
+    if (filePath) {
+      try {
+        await deleteResume(filePath)
+      } catch (e) {
+        console.error('删除简历文件失败:', e)
+      }
+    }
+    resumeFileList.value = []
+    resumeText.value = ''
+    formData.value.resumeUrl = undefined
   }
 
   const fetchProfile = async () => {
     try {
       const res: any = await fetchStudentProfile()
+      // HTTP 工具返回的是 res.data.data，所以直接检查 res 是否有数据
       if (res) {
+        // 后端字段映射到前端字段
         formData.value = {
           name: res.real_name || res.name || '',
           studentId: res.student_no || '',
@@ -368,11 +411,20 @@
           maxSalary: res.desire_salary_max || 0,
           skillTags: res.skills || []
         }
-        profileCompleteness.value = calculateCompleteness(formData.value)
+        // 使用后端动态计算的完整度
+        profileCompleteness.value = res.profile_complete || 0
         if (res.resume_url) {
-          resumeUrl.value = res.resume_url
-          resumeText.value = res.resume_text || ''
+          formData.value.resumeUrl = res.resume_url
           resumeFileList.value = [{ name: '简历', url: res.resume_url } as UploadFile]
+          // 加载已保存简历的文本内容
+          try {
+            const textRes: any = await getResumeText(res.resume_url)
+            if (textRes && textRes.text) {
+              resumeText.value = textRes.text
+            }
+          } catch (e) {
+            console.error('加载简历内容失败:', e)
+          }
         }
       }
     } catch (error) {
@@ -389,6 +441,7 @@
     try {
       await formRef.value?.validate()
       submitLoading.value = true
+      // 前端字段映射到后端字段
       const submitData = {
         real_name: formData.value.name,
         student_no: formData.value.studentId,
@@ -401,11 +454,14 @@
         desire_industry: formData.value.expectedIndustry,
         desire_salary_min: formData.value.minSalary,
         desire_salary_max: formData.value.maxSalary,
-        skills: formData.value.skillTags
+        skills: formData.value.skillTags,
+        resume_url: formData.value.resumeUrl
       }
       await updateStudentProfile(submitData)
+      // HTTP 拦截器已处理错误，如果执行到这里说明请求成功
       ElMessage.success('保存成功')
-      profileCompleteness.value = calculateCompleteness(formData.value)
+      // 保存成功后重新获取档案以获取最新的完整度
+      fetchProfile()
     } catch (error) {
       console.error('保存失败:', error)
     } finally {
@@ -416,7 +472,6 @@
   const handleReset = () => {
     formRef.value?.resetFields()
     resumeFileList.value = []
-    resumeUrl.value = ''
     resumeText.value = ''
   }
 
@@ -428,21 +483,6 @@
 <style scoped>
   .page-student-profile {
     padding: 20px;
-    height: 100%;
-    box-sizing: border-box;
-    overflow-y: auto;
-  }
-
-  :deep(.el-card) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  :deep(.el-card__body) {
-    flex: 1;
-    overflow-y: auto;
-    max-height: none;
   }
 
   .skill-tags-wrapper {
@@ -467,46 +507,7 @@
     text-align: left;
   }
 
-  .resume-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .resume-upload-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .resume-text-preview {
-    background: var(--el-fill-color-lighter);
-    border: 1px solid var(--el-border-color-extra-light);
-    border-radius: 8px;
-    padding: 12px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .resume-text-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-secondary);
-  }
-
-  .resume-text-content {
-    font-size: 13px;
-    line-height: 1.8;
-    color: var(--el-text-color-regular);
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 500px;
-    overflow-y: auto;
+  .resume-preview-card :deep(.el-card__body) {
+    padding: 12px 16px;
   }
 </style>

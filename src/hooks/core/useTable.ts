@@ -305,14 +305,20 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
         params || {}
       ) as TParams
 
-      // 剔除不需要的参数
+      // 剔除不需要的参数和 undefined 值
+      const filteredParams = { ...requestParams }
       if (excludeParams.length > 0) {
-        const filteredParams = { ...requestParams }
         excludeParams.forEach((key) => {
           delete (filteredParams as Record<string, unknown>)[key]
         })
-        requestParams = filteredParams as TParams
       }
+      // 过滤掉 undefined 值（但保留 0 等有效 falsy 值）
+      Object.keys(filteredParams).forEach((key) => {
+        if ((filteredParams as Record<string, unknown>)[key] === undefined) {
+          delete (filteredParams as Record<string, unknown>)[key]
+        }
+      })
+      requestParams = filteredParams as TParams
 
       // 检查缓存
       if (useCache && cache) {
@@ -485,27 +491,35 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
     const paramsRecord = searchParams as Record<string, unknown>
     const currentSize = pagination.size || ((paramsRecord[sizeKey] as number) ?? 10)
 
+    // 先清空所有非分页参数
     Object.keys(searchParams).forEach((key) => {
       if (key !== pageKey && key !== sizeKey) {
         delete paramsRecord[key]
       }
     })
 
-    Object.assign(
-      searchParams,
-      {
-        [pageKey]: 1,
-        [sizeKey]: currentSize
-      },
-      params || {}
-    )
+    // 使用展开运算符合并，显式允许 undefined 值覆盖
+    const merged = {
+      [pageKey]: 1,
+      [sizeKey]: currentSize,
+      ...params
+    }
+
+    // 显式设置每个参数（允许 undefined）
+    Object.keys(merged).forEach((key) => {
+      if (key !== pageKey && key !== sizeKey) {
+        paramsRecord[key] = merged[key]
+      }
+    })
 
     pagination.current = 1
     pagination.size = currentSize
+    // 重置 lastRequestedPage，确保 handleCurrentChange 会发请求
+    lastRequestedPage = 0
   }
 
-  // 防重复调用的标志
-  let isCurrentChanging = false
+  // 记录上一次请求的页码，用于检测是否真的需要发请求
+  let lastRequestedPage = 1
 
   // 处理分页大小变化
   const handleSizeChange = async (newSize: number): Promise<void> => {
@@ -518,6 +532,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
     pagination.current = 1
     paramsRecord[sizeKey] = newSize
     paramsRecord[pageKey] = 1
+    lastRequestedPage = 1
 
     clearCache(CacheInvalidationStrategy.CLEAR_CURRENT, '分页大小变化')
 
@@ -528,32 +543,22 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
   const handleCurrentChange = async (newCurrent: number): Promise<void> => {
     if (newCurrent <= 0) return
 
-    // 修复：防止重复调用
-    if (isCurrentChanging) {
-      return
-    }
-
-    // 修复：如果当前页没有变化，不需要重新请求
-    if (pagination.current === newCurrent) {
+    // 修复：ElPagination 的 v-model 会先更新 pagination.current，再触发事件。
+    // 此时 pagination.current === newCurrent 总是成立，导致误判为"页码未变化"而跳过请求。
+    // 使用 lastRequestedPage（上次实际发请求时的页码）来判断是否真的需要请求。
+    if (lastRequestedPage === newCurrent) {
       logger.log('分页页码未变化，跳过请求')
       return
     }
 
-    try {
-      isCurrentChanging = true
-
-      // 修复：只更新必要的状态
-      const paramsRecord = searchParams as Record<string, unknown>
-      pagination.current = newCurrent
-      // 只有当 searchParams 的分页字段与新值不同时才更新
-      if (paramsRecord[pageKey] !== newCurrent) {
-        paramsRecord[pageKey] = newCurrent
-      }
-
-      await getData()
-    } finally {
-      isCurrentChanging = false
+    const paramsRecord = searchParams as Record<string, unknown>
+    pagination.current = newCurrent
+    lastRequestedPage = newCurrent
+    if (paramsRecord[pageKey] !== newCurrent) {
+      paramsRecord[pageKey] = newCurrent
     }
+
+    await getData()
   }
 
   // 针对不同业务场景的刷新方法

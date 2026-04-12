@@ -6,7 +6,7 @@ Backend 通过此模块代理调用 RAG 服务（独立运行于 1145 端口）
 """
 
 import logging
-from typing import Any
+from typing import Any, Optional, List, Dict
 
 import httpx
 
@@ -71,7 +71,7 @@ class RAGService:
         question: str,
         user_id: str,
         role_type: str,
-        session_id: str | None = None,
+        session_id: Optional[str] = None,
     ) -> dict:
         """
         智能问答（非流式）
@@ -114,7 +114,7 @@ class RAGService:
         question: str,
         user_id: str,
         role_type: str,
-        session_id: str | None = None,
+        session_id: Optional[str] = None,
     ) -> httpx.Response:
         """
         智能问答（流式 - SSE）
@@ -185,7 +185,7 @@ class RAGService:
 
     async def list_knowledge(
         self,
-        category: str | None = None,
+        category: Optional[str] = None,
         page: int = 1,
         page_size: int = 10,
     ) -> dict:
@@ -243,9 +243,9 @@ class RAGService:
 
     async def get_chat_history(
         self,
-        session_id: str | None = None,
-        user_id: str | None = None,
-    ) -> list[dict]:
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> List[Dict]:
         """
         获取会话历史
 
@@ -293,9 +293,66 @@ class RAGService:
         except Exception:
             return False
 
+    async def recommend_jobs(
+        self,
+        user_id: str,
+        top_k: int = 5,
+    ) -> dict:
+        """
+        获取岗位推荐
+
+        Args:
+            user_id: 学生账户ID
+            top_k: 推荐数量
+
+        Returns:
+            推荐结果
+        """
+        payload = {
+            "user_id": user_id,
+            "top_k": top_k,
+        }
+
+        result = await self._post("/rag/job/recommend", payload)
+
+        if result.get("code") == 200:
+            return result.get("data", {})
+
+        raise RAGServiceError(result.get("message", "推荐服务异常"), 500)
+
+    async def optimize_resume(
+        self,
+        account_id: str,
+        resume_text: str,
+        target_job: str,
+    ) -> dict:
+        """
+        AI 简历优化
+
+        Args:
+            account_id: 学生账户ID
+            resume_text: 简历文本
+            target_job: 目标岗位
+
+        Returns:
+            优化结果
+        """
+        payload = {
+            "user_id": account_id,
+            "resume_text": resume_text,
+            "target_job": target_job,
+        }
+
+        result = await self._post("/rag/resume/optimize", payload)
+
+        if result.get("code") == 200:
+            return result.get("data", {})
+
+        raise RAGServiceError(result.get("message", "简历优化服务异常"), 500)
+
 
 # 全局单例
-_rag_service: RAGService | None = None
+_rag_service: Optional[RAGService] = None
 
 
 def get_rag_service() -> RAGService:

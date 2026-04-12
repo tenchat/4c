@@ -1,6 +1,6 @@
 # app/services/activity_service.py
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, extract
 from typing import Optional
 import uuid
 from fastapi import HTTPException
@@ -31,7 +31,8 @@ class ActivityService:
         if type:
             conditions.append(CompanyActivity.type == ActivityType(type))
         if year:
-            conditions.append(func.year(CompanyActivity.activity_date) == year)
+            # Use extract for SQLite compatibility
+            conditions.append(extract('year', CompanyActivity.activity_date) == year)
         if min_expected_num is not None:
             conditions.append(CompanyActivity.expected_num >= min_expected_num)
         if max_expected_num is not None:
@@ -75,6 +76,7 @@ class ActivityService:
             end_time=data.end_time,
             description=data.description,
             expected_num=data.expected_num,
+            review_status=0,  # 待审核
         )
         self.db.add(row)
         await self.db.commit()

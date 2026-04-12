@@ -13,6 +13,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+# 中文行业名 -> job_descriptions.industry 英文值的映射
+_CHINESE_TO_INDUSTRY_KEY = {
+    '互联网': 'internet',
+    '金融': 'finance',
+    '制造': 'manufacturing',
+    '制造业': 'manufacturing',
+    '医疗': 'healthcare',
+    '健康': 'healthcare',
+    '房地产': 'real_estate',
+    '政府': 'government',
+    '公共事业': 'government',
+    '教育': 'education',
+    '培训': 'education',
+    '零售': 'retail',
+    '消费': 'retail',
+    '文化': 'culture',
+    '传媒': 'culture',
+    '物流': 'logistics',
+    '运输': 'logistics',
+    '能源': 'energy',
+    '化工': 'energy',
+    '建筑': 'construction',
+    '工程': 'construction',
+    '通信': 'telecom',
+    '电子': 'telecom',
+    '服务': 'service',
+    '农业': 'agriculture',
+}
+
 
 class StructuredQueryService:
     """查询结构化数据，用于注入 RAG prompt"""
@@ -115,32 +144,44 @@ class StructuredQueryService:
         查询某行业的职位
 
         Args:
-            industry: 行业名称
+            industry: 行业名称（支持中文行业名，自动映射到英文 key）
             limit: 返回数量
 
         Returns:
             职位列表
         """
+        # 尝试将中文行业名映射为英文 key
+        industry_key = _CHINESE_TO_INDUSTRY_KEY.get(industry, industry)
+
         query = """
             SELECT
                 jd.job_id,
                 jd.title,
-                jd.job_type,
                 jd.min_salary,
                 jd.max_salary,
                 jd.city,
+                jd.province,
+                jd.industry,
                 jd.description,
                 jd.keywords,
                 c.company_name
             FROM job_descriptions jd
             LEFT JOIN companies c ON jd.company_id = c.company_id
-            WHERE jd.industry LIKE :industry
-               OR jd.description LIKE :industry
+            WHERE jd.industry = :industry_key
+               OR jd.industry LIKE :industry_like
+               OR jd.description LIKE :industry_like
             ORDER BY jd.published_at DESC
             LIMIT :limit
         """
-        results = await self._execute(query, {"industry": f"%{industry}%", "limit": limit})
-        logger.info(f"查询行业 {industry} 的职位: {len(results)} 条")
+        results = await self._execute(
+            query,
+            {
+                "industry_key": industry_key,
+                "industry_like": f"%{industry}%",
+                "limit": limit,
+            },
+        )
+        logger.info(f"查询行业 {industry}(key={industry_key}) 的职位: {len(results)} 条")
         return results
 
     async def query_any_table(

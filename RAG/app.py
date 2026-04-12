@@ -110,12 +110,15 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 def register_routes() -> None:
     """注册 API 路由"""
-    from api import qa, upload, history
+    from api import qa, upload, history, job_recommend, resume_optimize, resume_parse
 
     # 注册路由
     app.include_router(qa.router, tags=["问答"])
     app.include_router(upload.router, tags=["知识库"])
     app.include_router(history.router, tags=["会话"])
+    app.include_router(job_recommend.router, tags=["推荐"])
+    app.include_router(resume_optimize.router, tags=["简历"])
+    app.include_router(resume_parse.router, tags=["简历"])
 
 
 # ==================== 根路径和健康检查 ====================

@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import logging
 
 from app.api.v1.router import api_router
 from app.core.redis_client import get_redis
 from app.core.database import get_db
+from app.core.config import get_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,6 +53,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 注册路由
 app.include_router(api_router, prefix="/api/v1")
 
+# 挂载静态文件（简历下载）
+settings = get_settings()
+upload_dir = Path(settings.UPLOAD_DIR or "./uploads/resumes")
+if upload_dir.exists():
+    app.mount("/uploads", StaticFiles(directory=str(upload_dir.parent)), name="uploads")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -63,6 +72,12 @@ async def startup_event():
         logger.info("Redis 连接成功")
     except Exception as e:
         logger.warning(f"Redis 连接失败: {e}")
+
+    # 创建上传目录
+    settings = get_settings()
+    upload_dir = Path(settings.UPLOAD_DIR or "./uploads/resumes")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"上传目录: {upload_dir.absolute()}")
 
     # 检查数据库连接
     # 注意: 实际生产环境应该使用完整的数据库连接测试

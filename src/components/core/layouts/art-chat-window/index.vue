@@ -27,7 +27,10 @@
         >
           <template v-for="(message, index) in messages" :key="index">
             <!-- 时间分隔线 -->
-            <div v-if="message.timeSeparator" class="my-4 flex items-center gap-2">
+            <div
+              v-if="message.timeSeparator"
+              class="my-4 flex items-center gap-2"
+            >
               <div class="h-px flex-1 bg-g-200"></div>
               <span class="text-xs text-g-500">{{ message.timeSeparator }}</span>
               <div class="h-px flex-1 bg-g-200"></div>

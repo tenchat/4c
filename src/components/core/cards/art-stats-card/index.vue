@@ -18,7 +18,7 @@
         :duration="2000"
         :decimals="decimals"
         :separator="separator"
-      />
+      /><span v-if="suffix" class="text-2xl font-medium">{{ suffix }}</span>
       <p
         class="mt-1 text-sm text-g-500 opacity-90"
         :style="{ color: textColor }"
@@ -56,6 +56,8 @@
     textColor?: string
     /** 是否显示箭头 */
     showArrow?: boolean
+    /** 后缀 */
+    suffix?: string
   }
 
   withDefaults(defineProps<StatsCardProps>(), {

@@ -146,6 +146,127 @@ async def verify_company(
     return {"code": 200, "message": "操作成功"}
 
 
+@router.get("/school-admins/pending")
+async def get_pending_school_admins(
+    status: int = Query(2, description="账号状态: 2=待审核, 1=已审核, 0=已禁用"),
+    current: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """获取待审核/已审核/已禁用的学校管理员列表"""
+    accounts, total = await service.get_pending_school_admins(status, current, size)
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "list": accounts,
+            "total": total,
+            "current": current,
+            "size": size
+        }
+    }
+
+
+@router.put("/school-admins/{account_id}/verify")
+async def verify_school_admin(
+    account_id: str,
+    data: dict,
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """审核学校管理员账号"""
+    action = data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="无效的操作")
+
+    success = await service.verify_school_admin(account_id, action)
+    if not success:
+        raise HTTPException(status_code=404, detail="学校管理员账号不存在")
+
+    return {"code": 200, "message": "操作成功"}
+
+
+@router.get("/configs")
+async def get_configs(
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """获取所有系统配置"""
+    configs = await service.get_system_configs()
+    return {"code": 200, "message": "success", "data": configs}
+
+
+@router.get("/configs/{config_key}")
+async def get_config(
+    config_key: str,
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """获取指定系统配置"""
+    config = await service.get_system_config(config_key)
+    if config is None:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    return {"code": 200, "message": "success", "data": config}
+
+
+@router.put("/configs/{config_key}")
+async def set_config(
+    config_key: str,
+    data: dict,
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """创建或更新系统配置"""
+    config_value = data.get("config_value")
+    if config_value is None:
+        raise HTTPException(status_code=400, detail="config_value 不能为空")
+    description = data.get("description")
+    await service.set_system_config(config_key, config_value, description)
+    return {"code": 200, "message": "更新成功"}
+
+
+@router.get("/company-admins/pending")
+async def get_pending_company_admins(
+    status: int = Query(2, description="账号状态: 2=待审核, 1=已审核, 0=已禁用"),
+    current: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """获取待审核/已审核/已禁用的企业管理员列表"""
+    accounts, total = await service.get_pending_company_admins(status, current, size)
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "list": accounts,
+            "total": total,
+            "current": current,
+            "size": size
+        }
+    }
+
+
+@router.put("/company-admins/{account_id}/verify")
+async def verify_company_admin(
+    account_id: str,
+    data: dict,
+    payload: dict = Depends(get_current_user),
+    service: AdminService = Depends(get_admin_service)
+):
+    """审核企业管理员账号"""
+    action = data.get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="无效的操作")
+
+    success = await service.verify_company_admin(account_id, action)
+    if not success:
+        raise HTTPException(status_code=404, detail="企业管理员账号不存在")
+
+    return {"code": 200, "message": "操作成功"}
+
+
 @router.get("/company-profile-updates/pending")
 async def get_pending_profile_updates(
     status: str = "pending",

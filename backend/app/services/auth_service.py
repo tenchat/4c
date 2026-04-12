@@ -19,37 +19,125 @@ class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def register(self, username: str, password: str, real_name: str, role: str) -> Account:
-        # 检查用户名是否已存在
+    async def register(
+        self,
+        username: str,
+        password: str,
+        role: str,
+        student_no: str = None,
+        real_name: str = None,
+        enterprise_name: str = None,
+        registration_code: str = None,
+    ) -> Account:
+        from app.models.student import StudentProfile
+        from app.models.company import Company
+        from app.core.security import get_password_hash
+
+        # 1. 校验用户名唯一性
         result = await self.db.execute(select(Account).where(Account.username == username))
         if result.scalar_one_or_none():
             raise Exception("用户名已存在")
 
-        account = Account(
-            account_id=str(uuid.uuid4()),
-            username=username,
-            password_hash=get_password_hash(password),
-            real_name=real_name,
-            role=RoleType(role),
-            status=AccountStatus.enabled.value if role != "company_admin" else AccountStatus.pending.value,
-        )
-        self.db.add(account)
-        await self.db.flush()
+        settings = get_settings()
 
-        # 创建关联的档案
+        # 2. 根据 role 分支处理
         if role == "student":
-            student_profile = StudentProfile(
-                profile_id=str(uuid.uuid4()),
-                account_id=account.account_id,
+            # 学生注册：关联已导入档案或创建新档案
+            if not student_no:
+                raise Exception("学生注册必须填写学号")
+
+            university_id = settings.DEFAULT_UNIVERSITY_ID or ""
+
+            # 查询是否存在匹配的 student_profiles（可能有多条同名学号）
+            profile_result = await self.db.execute(
+                select(StudentProfile).where(StudentProfile.student_no == student_no)
             )
-            self.db.add(student_profile)
+            existing_profiles = profile_result.scalars().all()
+
+            if len(existing_profiles) > 1:
+                raise Exception("存在多条同名学号记录，请联系管理员处理")
+
+            account = Account(
+                account_id=str(uuid.uuid4()),
+                username=username,
+                password_hash=get_password_hash(password),
+                real_name=real_name or student_no,
+                role=RoleType.student,
+                status=AccountStatus.enabled.value,
+            )
+            self.db.add(account)
+            await self.db.flush()
+
+            if len(existing_profiles) == 1:
+                existing_profile = existing_profiles[0]
+                if existing_profile.account_id:
+                    # 档案已绑定其他账户
+                    raise Exception("该学号已注册，如有问题请联系管理员")
+                # 绑定到已有档案
+                existing_profile.account_id = account.account_id
+            else:
+                # 无匹配档案，创建新档案
+                new_profile = StudentProfile(
+                    profile_id=str(uuid.uuid4()),
+                    account_id=account.account_id,
+                    university_id=university_id,
+                    student_no=student_no,
+                    real_name=real_name or "",
+                    college="",
+                    major="",
+                    degree=1,
+                )
+                self.db.add(new_profile)
+
+        elif role == "school_admin":
+            # 学校管理员：校验注册码（优先从 system_configs 读取，否则用 .env 兜底）
+            if not registration_code:
+                raise Exception("学校管理员注册必须填写注册码")
+            # 尝试从数据库配置读取
+            from app.models.system_config import SystemConfig
+            db_config_result = await self.db.execute(
+                select(SystemConfig).where(SystemConfig.config_key == "SCHOOL_ADMIN_REGISTRATION_CODE")
+            )
+            db_config = db_config_result.scalar_one_or_none()
+            valid_code = db_config.config_value if db_config and db_config.config_value else settings.SCHOOL_ADMIN_REGISTRATION_CODE
+            if registration_code != valid_code:
+                raise Exception("注册码错误，请联系管理员获取正确注册码")
+
+            account = Account(
+                account_id=str(uuid.uuid4()),
+                username=username,
+                password_hash=get_password_hash(password),
+                real_name=real_name or username,
+                role=RoleType.school_admin,
+                status=AccountStatus.pending.value,
+            )
+            self.db.add(account)
+
         elif role == "company_admin":
+            # 企业：创建 Account + Company
+            if not enterprise_name:
+                raise Exception("企业注册必须填写企业名称")
+
+            account = Account(
+                account_id=str(uuid.uuid4()),
+                username=username,
+                password_hash=get_password_hash(password),
+                real_name=real_name or enterprise_name,
+                role=RoleType.company_admin,
+                status=AccountStatus.pending.value,
+            )
+            self.db.add(account)
+            await self.db.flush()
+
             company = Company(
                 company_id=str(uuid.uuid4()),
                 account_id=account.account_id,
-                company_name=real_name or username,
+                company_name=enterprise_name,
             )
             self.db.add(company)
+
+        else:
+            raise Exception("不支持的角色类型")
 
         await self.db.commit()
         await self.db.refresh(account)
@@ -222,3 +310,21 @@ class AuthService:
             "realName": account.real_name,
             "status": account.status,
         }
+
+    async def change_password(self, account_id: str, old_password: str, new_password: str) -> bool:
+        """修改用户密码"""
+        result = await self.db.execute(
+            select(Account).where(Account.account_id == account_id)
+        )
+        account = result.scalar_one_or_none()
+        if not account:
+            return False
+
+        # 验证旧密码
+        if not verify_password(old_password, account.password_hash):
+            return False
+
+        # 更新新密码
+        account.password_hash = get_password_hash(new_password)
+        await self.db.commit()
+        return True

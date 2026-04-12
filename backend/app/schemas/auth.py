@@ -9,8 +9,11 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
-    real_name: Optional[str] = None
     role: Literal["student", "school_admin", "company_admin"]
+    student_no: Optional[str] = None       # 学生必填
+    real_name: Optional[str] = None        # 学生姓名
+    enterprise_name: Optional[str] = None  # 企业名称
+    registration_code: Optional[str] = None # 学校管理员注册码
 
 class TokenResponse(BaseModel):
     access_token: str

@@ -30,6 +30,7 @@ class CompanyActivity(Base, TimestampMixin):
     end_time = Column(Time, nullable=True)
     description = Column(Text, nullable=True)
     status = Column(SmallInteger, nullable=False, default=1, index=True)
+    review_status = Column(Integer, default=0, index=True)  # 0待审核 1审核通过 2审核拒绝
     expected_num = Column(Integer, nullable=True)
     actual_num = Column(Integer, nullable=True)
 

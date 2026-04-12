@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from typing import Optional
 from datetime import datetime
+import uuid
 from fastapi import HTTPException
 from app.models.company_announcement import CompanyAnnouncement, AnnouncementStatus
 from app.schemas.company_announcement import AnnouncementCreate, AnnouncementUpdate, AnnouncementOut
@@ -23,7 +24,14 @@ class AnnouncementService:
         if status is not None:
             conditions.append(CompanyAnnouncement.status == status)
         if year:
-            conditions.append(func.year(CompanyAnnouncement.published_at) == year)
+            # Use extract for SQLite compatibility, handle NULL published_at
+            from sqlalchemy import extract
+            conditions.append(
+                and_(
+                    CompanyAnnouncement.published_at.isnot(None),
+                    extract('year', CompanyAnnouncement.published_at) == year
+                )
+            )
 
         count_result = await self.db.execute(
             select(func.count()).select_from(CompanyAnnouncement).where(and_(*conditions))
@@ -54,7 +62,9 @@ class AnnouncementService:
         self, company_id: str, data: AnnouncementCreate
     ) -> AnnouncementOut:
         published_at = datetime.utcnow() if data.status == 1 else None
+        announcement_id = str(uuid.uuid4())
         row = CompanyAnnouncement(
+            announcement_id=announcement_id,
             company_id=company_id,
             title=data.title,
             content=data.content,
