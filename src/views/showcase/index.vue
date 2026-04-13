@@ -449,7 +449,9 @@
         </div>
 
         <div class="team-card">
-          <img src="/icon2.svg" alt="logo" class="team-logo" />
+          <a href="https://github.com/tenchat/4c" target="_blank" class="team-member">
+            <img src="/icon2.svg" alt="logo" class="team-logo" />
+          </a>
           <h3>大学生就业信息智能分析平台</h3>
           <p class="team-desc">以数据驱动就业决策，用 AI 赋能职业规划</p>
 
@@ -457,11 +459,11 @@
 
           <div class="team-roles">
             <a href="https://github.com/tenchat" target="_blank" class="team-member">
-              <img src="https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/ccv2%2F2026-04-12%2FMiniMax-M2.7%2F2036811306220130703%2F9d0619aa6e64e5a062e4d2d7f846cb07fea652f740c22225fddba6a9b81c23d1..png?Expires=1776064948&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=GpdDXcSxAyU1E2U1LnlJ1yrEPCs%3D" alt="tenchat" class="team-avatar" />
+              <img src="/u1.png" alt="tenchat" class="team-avatar" />
               <p class="team-name">tenchat</p>
             </a>
             <a href="https://github.com/LEO_Jackwei" target="_blank" class="team-member">
-              <img src="https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/ccv2%2F2026-04-12%2FMiniMax-M2.7%2F2036811306220130703%2Fa3a76ff93243184f80cec64f3b450541c8bd65b67342e45da31f81c3fae36b12..jpeg?Expires=1776064948&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=X9mZxCuFvLRTUc4l%2FHppLeMDhb8%3D" alt="LEO_Jackwei" class="team-avatar" />
+              <img src="/u2.jpg" alt="LEO_Jackwei" class="team-avatar" />
               <p class="team-name">LEO_Jackwei</p>
             </a>
           </div>
@@ -484,76 +486,76 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { ref, onMounted, onUnmounted } from 'vue'
-import {
-  Box,
-  ArrowRight,
-  VideoPlay,
-  User,
-  UserFilled,
-  Plus,
-  Reading,
-  OfficeBuilding,
-  Grid,
-  TrendCharts,
-  DataBoard,
-  WarningFilled,
-  Cpu,
-  ChatDotRound,
-  Connection,
-  Lock,
-  Document,
-  Monitor,
-  MagicStick,
-  Folder,
-  Tools,
-  Top
-} from '@element-plus/icons-vue'
+  import { useRouter } from 'vue-router'
+  import { ref, onMounted, onUnmounted } from 'vue'
+  import {
+    Box,
+    ArrowRight,
+    VideoPlay,
+    User,
+    UserFilled,
+    Plus,
+    Reading,
+    OfficeBuilding,
+    Grid,
+    TrendCharts,
+    DataBoard,
+    WarningFilled,
+    Cpu,
+    ChatDotRound,
+    Connection,
+    Lock,
+    Document,
+    Monitor,
+    MagicStick,
+    Folder,
+    Tools,
+    Top
+  } from '@element-plus/icons-vue'
 
-defineOptions({ name: 'Showcase' })
+  defineOptions({ name: 'Showcase' })
 
-const router = useRouter()
+  const router = useRouter()
 
-// Background image slider
-const bgImages = [
-  '/bg/1.jpg',
-  '/bg/2.jpg',
-  '/bg/3.jpg',
-  '/bg/4.jpg',
-  '/bg/5.jpg',
-  '/bg/6.jpg',
-  '/bg/7.jpg',
-  '/bg/8.jpg',
-  '/bg/9.jpg'
-]
-const currentBgIndex = ref(0)
-let bgTimer: ReturnType<typeof setInterval> | null = null
+  // Background image slider
+  const bgImages = [
+    '/bg/1.jpg',
+    '/bg/2.jpg',
+    '/bg/3.jpg',
+    '/bg/4.jpg',
+    '/bg/5.jpg',
+    '/bg/6.jpg',
+    '/bg/7.jpg',
+    '/bg/8.jpg',
+    '/bg/9.jpg'
+  ]
+  const currentBgIndex = ref(0)
+  let bgTimer: ReturnType<typeof setInterval> | null = null
 
-const startBgTimer = () => {
-  bgTimer = setInterval(() => {
-    currentBgIndex.value = (currentBgIndex.value + 1) % bgImages.length
-  }, 5000)
-}
-
-onMounted(() => {
-  startBgTimer()
-})
-
-onUnmounted(() => {
-  if (bgTimer) clearInterval(bgTimer)
-})
-
-const goLogin = () => {
-  router.push('/auth/login')
-}
-
-const scrollTo = (id: string) => {
-  const element = document.getElementById(id)
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth' })
+  const startBgTimer = () => {
+    bgTimer = setInterval(() => {
+      currentBgIndex.value = (currentBgIndex.value + 1) % bgImages.length
+    }, 5000)
   }
-}
+
+  onMounted(() => {
+    startBgTimer()
+  })
+
+  onUnmounted(() => {
+    if (bgTimer) clearInterval(bgTimer)
+  })
+
+  const goLogin = () => {
+    router.push('/auth/login')
+  }
+
+  const scrollTo = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
 </script>
 
 <style scoped>
@@ -566,33 +568,33 @@ const scrollTo = (id: string) => {
     --cta: #22c55e;
     --cta-light: #4ade80;
     --bg: #eff6ff;
-    --bg-white: #ffffff;
+    --bg-white: #fff;
     --bg-light: #f8fafc;
     --text: #1e3a8a;
     --text-muted: #64748b;
     --text-light: #94a3b8;
     --border: #e2e8f0;
-    --shadow: rgba(30, 64, 175, 0.08);
-    --shadow-lg: rgba(30, 64, 175, 0.12);
+    --shadow: rgb(30 64 175 / 8%);
+    --shadow-lg: rgb(30 64 175 / 12%);
     --gradient-primary: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
     --gradient-cta: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
 
     font-family:
       'Noto Sans',
-      'Figtree',
+      Figtree,
       -apple-system,
       BlinkMacSystemFont,
       sans-serif;
-    background: var(--bg);
-    color: var(--text);
     line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
   }
 
   .showcase-page h1,
   .showcase-page h2,
   .showcase-page h3,
   .showcase-page h4 {
-    font-family: 'Figtree', 'Noto Sans', sans-serif;
+    font-family: Figtree, 'Noto Sans', sans-serif;
     font-weight: 700;
   }
 
@@ -601,28 +603,28 @@ const scrollTo = (id: string) => {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 4px 24px var(--shadow);
-    padding: 0 32px;
-    height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: 56px;
+    padding: 0 32px;
+    background: rgb(255 255 255 / 85%);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgb(255 255 255 / 60%);
+    box-shadow: 0 4px 24px var(--shadow);
   }
 
   .nav-brand {
     display: flex;
-    align-items: center;
     gap: 10px;
+    align-items: center;
   }
 
   .nav-logo {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
     object-fit: contain;
+    border-radius: 8px;
   }
 
   .nav-title {
@@ -641,8 +643,8 @@ const scrollTo = (id: string) => {
     font-weight: 600;
     color: var(--text-muted);
     text-decoration: none;
-    transition: color 0.2s;
     cursor: pointer;
+    transition: color 0.2s;
   }
 
   .nav-link:hover {
@@ -652,17 +654,17 @@ const scrollTo = (id: string) => {
   /* Container */
   .container {
     max-width: 1200px;
-    margin: 0 auto;
     padding: 0 32px;
+    margin: 0 auto;
   }
 
   /* Hero Section */
   .hero {
     position: relative;
     z-index: 1;
-    text-align: center;
     padding: 80px 24px 64px;
     overflow: hidden;
+    text-align: center;
   }
 
   /* Roles Section - continues background */
@@ -675,19 +677,16 @@ const scrollTo = (id: string) => {
   /* Background Slider - shared for hero + roles */
   .hero-bg {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 0;
   }
 
   .hero-bg-slide {
     position: absolute;
     inset: 0;
-    background-size: cover;
-    background-position: center;
     background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
     opacity: 0;
     transition: opacity 1.5s ease-in-out;
   }
@@ -700,14 +699,14 @@ const scrollTo = (id: string) => {
   .hero-bg-overlay-base {
     position: absolute;
     inset: 0;
+    pointer-events: none;
     background: linear-gradient(
       to right,
-      rgba(150, 200, 255, 0.3) 0%,
-      rgba(150, 200, 255, 0.6) 25%,
-      rgba(150, 200, 255, 0.6) 75%,
-      rgba(150, 200, 255, 0.3) 100%
+      rgb(150 200 255 / 30%) 0%,
+      rgb(150 200 255 / 60%) 25%,
+      rgb(150 200 255 / 60%) 75%,
+      rgb(150 200 255 / 30%) 100%
     );
-    pointer-events: none;
   }
 
   .hero-content {
@@ -719,19 +718,20 @@ const scrollTo = (id: string) => {
 
   .hero-badge {
     display: inline-flex;
-    align-items: center;
     gap: 8px;
-    border-radius: 20px;
+    align-items: center;
     padding: 8px 20px;
+    margin-bottom: 24px;
     font-size: 12px;
     font-weight: 700;
     color: var(--text-muted);
-    margin-bottom: 24px;
+
     /* 文字阴影版毛玻璃 */
     text-shadow:
-      0 0 20px rgba(255, 255, 255, 0.9),
-      0 0 40px rgba(255, 255, 255, 0.6);
-    background: rgba(255, 255, 255, 0.25);
+      0 0 20px rgb(255 255 255 / 90%),
+      0 0 40px rgb(255 255 255 / 60%);
+    background: rgb(255 255 255 / 25%);
+    border-radius: 20px;
   }
 
   .hero-badge .el-icon {
@@ -739,25 +739,28 @@ const scrollTo = (id: string) => {
   }
 
   .hero h1 {
+    margin-bottom: 20px;
     font-size: 48px;
     font-weight: 800;
-    color: var(--text);
-    letter-spacing: -1px;
     line-height: 1.2;
-    margin-bottom: 20px;
+    color: var(--text);
+
     /* 文字阴影版毛玻璃 */
     text-shadow:
-      0 0 20px rgba(255, 255, 255, 0.95),
-      0 0 40px rgba(255, 255, 255, 0.7),
-      0 2px 8px rgba(255, 255, 255, 0.5);
+      0 0 20px rgb(255 255 255 / 95%),
+      0 0 40px rgb(255 255 255 / 70%),
+      0 2px 8px rgb(255 255 255 / 50%);
+    letter-spacing: -1px;
   }
 
   .hero h1 .hero-title-img {
-    height: 3.6em;
     display: block;
+    height: 3.6em;
     margin: 0 auto 8px;
+
     /* 毛玻璃效果 */
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 10px rgb(255 255 255 / 80%))
+      drop-shadow(0 0 20px rgb(255 255 255 / 50%));
     animation: float 3s ease-in-out infinite;
   }
 
@@ -766,21 +769,23 @@ const scrollTo = (id: string) => {
     100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-12px);
     }
   }
 
   .hero p {
-    font-size: 18px;
-    color: var(--text);
-    line-height: 1.8;
     max-width: 720px;
     margin: 0 auto;
+    font-size: 18px;
+    line-height: 1.8;
+    color: var(--text);
+
     /* 文字阴影版毛玻璃 */
     text-shadow:
-      0 0 15px rgba(255, 255, 255, 0.9),
-      0 0 30px rgba(255, 255, 255, 0.5);
+      0 0 15px rgb(255 255 255 / 90%),
+      0 0 30px rgb(255 255 255 / 50%);
   }
 
   .hero-buttons {
@@ -792,12 +797,12 @@ const scrollTo = (id: string) => {
 
   .hero-buttons .el-button {
     display: inline-flex;
-    align-items: center;
     gap: 10px;
+    align-items: center;
     padding: 18px 36px;
-    border-radius: 14px;
     font-size: 15px;
     font-weight: 700;
+    border-radius: 14px;
   }
 
   /* Section */
@@ -810,44 +815,46 @@ const scrollTo = (id: string) => {
   }
 
   .section-header {
-    text-align: center;
     margin-bottom: 48px;
+    text-align: center;
   }
 
   .section-header .section-title h2 {
     font-size: 32px;
     font-weight: 800;
     color: var(--text);
-    letter-spacing: -0.5px;
+
     /* 文字阴影版毛玻璃 */
     text-shadow:
-      0 0 20px rgba(255, 255, 255, 0.95),
-      0 0 40px rgba(255, 255, 255, 0.7);
+      0 0 20px rgb(255 255 255 / 95%),
+      0 0 40px rgb(255 255 255 / 70%);
+    letter-spacing: -0.5px;
   }
 
   .section-header .section-subtitle {
-    font-size: 15px;
-    color: var(--text-muted);
-    font-weight: 500;
-    /* 文字阴影版毛玻璃 */
-    text-shadow:
-      0 0 15px rgba(255, 255, 255, 0.9),
-      0 0 30px rgba(255, 255, 255, 0.5);
     display: block;
     margin-top: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-muted);
+
+    /* 文字阴影版毛玻璃 */
+    text-shadow:
+      0 0 15px rgb(255 255 255 / 90%),
+      0 0 30px rgb(255 255 255 / 50%);
   }
 
   .section-title {
     display: flex;
+    gap: 12px;
     align-items: center;
     justify-content: center;
-    gap: 12px;
     margin-bottom: 8px;
   }
 
   .section-title .el-icon {
-    color: var(--primary);
     font-size: 28px;
+    color: var(--primary);
   }
 
   /* User Roles */
@@ -858,30 +865,30 @@ const scrollTo = (id: string) => {
   }
 
   .role-card {
-    background: var(--bg-white);
-    border-radius: 20px;
     padding: 28px;
     text-align: center;
+    background: var(--bg-white);
+    border: 1px solid rgb(0 0 0 / 4%);
+    border-radius: 20px;
     box-shadow: 0 4px 24px var(--shadow);
-    border: 1px solid rgba(0, 0, 0, 0.04);
     transition:
       transform 0.2s,
       box-shadow 0.2s;
   }
 
   .role-card:hover {
-    transform: translateY(-4px);
     box-shadow: 0 8px 32px var(--shadow-lg);
+    transform: translateY(-4px);
   }
 
   .role-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 56px;
+    height: 56px;
     margin: 0 auto 16px;
+    border-radius: 16px;
   }
 
   .role-icon.blue {
@@ -897,21 +904,21 @@ const scrollTo = (id: string) => {
   }
 
   .role-icon .el-icon {
-    color: white;
     font-size: 28px;
+    color: white;
   }
 
   .role-card h4 {
+    margin-bottom: 8px;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 8px;
   }
 
   .role-card p {
     font-size: 13px;
-    color: var(--text-muted);
     line-height: 1.6;
+    color: var(--text-muted);
   }
 
   /* Features Grid */
@@ -922,31 +929,31 @@ const scrollTo = (id: string) => {
   }
 
   .feature-card {
-    background: var(--bg-white);
-    border-radius: 20px;
-    padding: 28px;
     position: relative;
+    padding: 28px;
     overflow: hidden;
+    background: var(--bg-white);
+    border: 1px solid rgb(0 0 0 / 4%);
+    border-radius: 20px;
     box-shadow: 0 4px 24px var(--shadow);
-    border: 1px solid rgba(0, 0, 0, 0.04);
     transition:
       transform 0.2s,
       box-shadow 0.2s;
   }
 
   .feature-card:hover {
-    transform: translateY(-4px);
     box-shadow: 0 8px 32px var(--shadow-lg);
+    transform: translateY(-4px);
   }
 
   .feature-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 48px;
+    height: 48px;
     margin-bottom: 16px;
+    border-radius: 14px;
   }
 
   .feature-icon.blue {
@@ -966,33 +973,33 @@ const scrollTo = (id: string) => {
   }
 
   .feature-icon .el-icon {
-    color: white;
     font-size: 24px;
+    color: white;
   }
 
   .feature-card h4 {
+    margin-bottom: 6px;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 6px;
   }
 
   .feature-card .tag {
     display: inline-flex;
-    align-items: center;
     gap: 4px;
-    background: var(--bg);
-    color: var(--text-muted);
-    border-radius: 6px;
+    align-items: center;
     padding: 4px 12px;
+    margin-bottom: 12px;
     font-size: 11px;
     font-weight: 700;
-    margin-bottom: 12px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-radius: 6px;
   }
 
   .feature-card .tag.primary {
-    background: rgba(30, 64, 175, 0.1);
     color: var(--primary);
+    background: rgb(30 64 175 / 10%);
   }
 
   .feature-card .tag .el-icon {
@@ -1001,23 +1008,23 @@ const scrollTo = (id: string) => {
 
   .feature-card p {
     font-size: 14px;
-    color: var(--text-muted);
     line-height: 1.7;
+    color: var(--text-muted);
   }
 
   /* Tech Path */
   .tech-path {
-    background: var(--bg-white);
-    border-radius: 24px;
     padding: 40px;
+    background: var(--bg-white);
+    border: 1px solid rgb(0 0 0 / 4%);
+    border-radius: 24px;
     box-shadow: 0 4px 24px var(--shadow);
-    border: 1px solid rgba(0, 0, 0, 0.04);
   }
 
   .path-step {
+    position: relative;
     display: flex;
     gap: 20px;
-    position: relative;
   }
 
   .path-step:not(:last-child) {
@@ -1025,63 +1032,63 @@ const scrollTo = (id: string) => {
   }
 
   .path-step:not(:last-child)::after {
-    content: '';
     position: absolute;
-    left: 19px;
     top: 44px;
+    left: 19px;
     width: 2px;
     height: calc(100% - 24px);
+    content: '';
     background: linear-gradient(to bottom, var(--primary-lighter), var(--border));
     border-radius: 1px;
   }
 
   .step-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    flex-shrink: 0;
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
+    width: 40px;
+    height: 40px;
+    font-family: Figtree, monospace;
     font-size: 13px;
     font-weight: 800;
-    font-family: 'Figtree', monospace;
+    border-radius: 50%;
   }
 
   .step-number.blue {
-    background: var(--primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+    background: var(--primary);
+    box-shadow: 0 4px 12px rgb(30 64 175 / 20%);
   }
 
   .step-number.cyan {
-    background: var(--secondary);
     color: white;
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+    background: var(--secondary);
+    box-shadow: 0 4px 12px rgb(14 165 233 / 20%);
   }
 
   .step-number.purple {
-    background: #7c3aed;
     color: white;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+    background: #7c3aed;
+    box-shadow: 0 4px 12px rgb(124 58 237 / 20%);
   }
 
   .step-number.orange {
-    background: #ea580c;
     color: white;
-    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+    background: #ea580c;
+    box-shadow: 0 4px 12px rgb(234 88 12 / 20%);
   }
 
   .step-number.red {
-    background: #dc2626;
     color: white;
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    background: #dc2626;
+    box-shadow: 0 4px 12px rgb(220 38 38 / 20%);
   }
 
   .step-number.green {
-    background: var(--cta);
     color: white;
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+    background: var(--cta);
+    box-shadow: 0 4px 12px rgb(34 197 94 / 20%);
   }
 
   .step-content {
@@ -1090,16 +1097,16 @@ const scrollTo = (id: string) => {
   }
 
   .step-content h4 {
+    margin-bottom: 6px;
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 6px;
   }
 
   .step-content p {
     font-size: 14px;
-    color: var(--text-muted);
     line-height: 1.6;
+    color: var(--text-muted);
   }
 
   /* Architecture Grid */
@@ -1110,11 +1117,11 @@ const scrollTo = (id: string) => {
   }
 
   .arch-card {
-    background: var(--bg-white);
-    border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 2px 16px var(--shadow);
+    background: var(--bg-white);
     border-top: 3px solid var(--primary);
+    border-radius: 16px;
+    box-shadow: 0 2px 16px var(--shadow);
     transition: transform 0.2s;
   }
 
@@ -1140,12 +1147,12 @@ const scrollTo = (id: string) => {
 
   .arch-card h4 {
     display: flex;
-    align-items: center;
     gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
     font-size: 15px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 14px;
   }
 
   .arch-card h4 .el-icon {
@@ -1169,30 +1176,30 @@ const scrollTo = (id: string) => {
   }
 
   .arch-card ul {
-    list-style: none;
     padding: 0;
     margin: 0;
+    list-style: none;
   }
 
   .arch-card li {
-    font-size: 13px;
-    color: var(--text-muted);
-    line-height: 2;
     position: relative;
     padding-left: 14px;
+    font-size: 13px;
+    line-height: 2;
+    color: var(--text-muted);
   }
 
   .arch-card li::before {
-    content: '';
     position: absolute;
-    left: 0;
     top: 50%;
-    transform: translateY(-50%);
+    left: 0;
     width: 5px;
     height: 5px;
-    border-radius: 50%;
+    content: '';
     background: var(--primary-lighter);
+    border-radius: 50%;
     opacity: 0.5;
+    transform: translateY(-50%);
   }
 
   /* Tech Stack */
@@ -1205,43 +1212,43 @@ const scrollTo = (id: string) => {
 
   .tech-tag {
     padding: 10px 20px;
-    border-radius: 10px;
-    background: var(--bg-white);
-    border: 1px solid var(--border);
     font-size: 13px;
     font-weight: 600;
     color: var(--text-muted);
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
     box-shadow: 0 2px 8px var(--shadow);
     transition: all 0.2s;
   }
 
   .tech-tag:hover {
-    border-color: var(--primary-light);
     color: var(--primary);
+    border-color: var(--primary-light);
   }
 
   /* Team Section */
   .team-card {
+    padding: 40px;
+    text-align: center;
     background: var(--bg-white);
     border-radius: 20px;
-    padding: 40px;
     box-shadow: 0 4px 24px var(--shadow);
-    text-align: center;
   }
 
   .team-logo {
     width: 72px;
     height: 72px;
-    border-radius: 16px;
-    object-fit: contain;
     margin: 0 auto 16px;
+    object-fit: contain;
+    border-radius: 16px;
   }
 
   .team-card h3 {
+    margin-bottom: 8px;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 8px;
   }
 
   .team-desc {
@@ -1251,22 +1258,22 @@ const scrollTo = (id: string) => {
 
   .divider {
     height: 1px;
-    background: var(--border);
     margin: 24px 40px;
+    background: var(--border);
   }
 
   .team-roles {
     display: flex;
-    justify-content: center;
     gap: 48px;
+    justify-content: center;
     margin-bottom: 24px;
   }
 
   .team-member {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 12px;
+    align-items: center;
     text-decoration: none;
     transition: transform 0.2s;
   }
@@ -1278,9 +1285,9 @@ const scrollTo = (id: string) => {
   .team-avatar {
     width: 80px;
     height: 80px;
-    border-radius: 50%;
     object-fit: cover;
     border: 3px solid var(--border);
+    border-radius: 50%;
     box-shadow: 0 4px 12px var(--shadow);
   }
 
@@ -1292,26 +1299,26 @@ const scrollTo = (id: string) => {
 
   .note {
     font-size: 13px;
-    color: var(--text-light);
     line-height: 1.8;
+    color: var(--text-light);
   }
 
   /* Footer */
   .footer {
-    text-align: center;
     padding: 32px;
-    border-top: 1px solid var(--border);
+    text-align: center;
     background: var(--bg-white);
+    border-top: 1px solid var(--border);
   }
 
   .footer p {
     font-size: 12px;
-    color: var(--text-light);
     font-weight: 500;
+    color: var(--text-light);
   }
 
   /* Responsive */
-  @media (max-width: 768px) {
+  @media (width <= 768px) {
     .hero h1 {
       font-size: 32px;
     }

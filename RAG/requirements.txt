@@ -15,6 +15,9 @@ langchain-community>=0.0.20
 langchain-chroma>=0.1.0
 langchain-text-splitters>=0.1.0
 
+# DashScope (阿里通义千问)
+dashscope>=1.14.0
+
 
 # 文档解析
 pymupdf>=1.23.0
@@ -25,3 +28,5 @@ chromadb>=0.4.22
 
 # 其他
 python-multipart>=0.0.6  # FastAPI 文件上传
+streamlit>=1.30.0
+python-dotenv>=1.0.0

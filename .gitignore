@@ -36,3 +36,4 @@ src/types/import/components.d.ts
 .auto-import.json
 
 backend\employment.db
+.history/
