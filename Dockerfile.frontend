@@ -11,7 +11,7 @@ RUN corepack enable && pnpm install --frozen-lockfile
 COPY . .
 
 # 构建生产版本
-RUN pnpm build
+RUN pnpm vite build
 
 # 生产镜像
 FROM nginx:alpine

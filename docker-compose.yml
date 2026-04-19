@@ -13,9 +13,13 @@ services:
       - VITE_PORT=3006
       - VITE_API_PROXY_URL=http://backend:5174
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      rag:
+        condition: service_started
     networks:
       - cccc_network
+    restart: unless-stopped
 
   # ========== 后端服务 ==========
   backend:
@@ -34,10 +38,15 @@ services:
     volumes:
       - ./backend/employment.db:/app/employment.db
       - ./backend/uploads:/app/uploads
-    depends_on:
-      - redis
     networks:
       - cccc_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5174/health']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   # ========== RAG 服务 ==========
   rag:
@@ -57,6 +66,7 @@ services:
       - ./RAG/employment.db:/app/employment.db
     networks:
       - cccc_network
+    restart: unless-stopped
 
   # ========== Redis 服务 ==========
   redis:
@@ -68,6 +78,12 @@ services:
       - redis_data:/data
     networks:
       - cccc_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
   cccc_network:
