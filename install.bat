@@ -33,9 +33,9 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 for /f "tokens=*" %%i in ('python --version') do echo [OK] %%i
-python -c "import sys; sys.exit(0 if sys.version_info >= (3,12,13) else 1)" 2>nul
+python -c "import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)" 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Python 3.12.13 required
+    echo [ERROR] Python 3.10+ required
     pause
     exit /b 1
 )

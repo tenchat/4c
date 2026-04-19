@@ -32,8 +32,8 @@ fi
 echo "[OK] $(python3 --version)"
 
 PY_VERSION=$(python3 -c 'import sys; print(sys.version_info.major * 10 + sys.version_info.minor)')
-if [ "$PY_VERSION" -lt 312 ]; then
-    echo "[ERROR] Python 3.12.13 required"
+if [ "$PY_VERSION" -lt 310 ]; then
+    echo "[ERROR] Python 3.10+ required"
     exit 1
 fi
 

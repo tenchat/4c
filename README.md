@@ -24,7 +24,7 @@
 ### 环境要求
 
 - Node.js 20+
-- Python 3.12以上
+- Python 3.10以上
 - pnpm 8+
 
 ### Windows 用户
@@ -125,4 +125,4 @@ taskkill /F /IM python.exe
 ### Q: 安装依赖失败？
 
 - 确保 Node.js 20+ 已安装
-- 确保 Python 3.12.13 已安装
+- 确保 Python 3.10+ 已安装
