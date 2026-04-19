@@ -30,7 +30,7 @@ services:
       - JWT_SECRET_KEY=resibacksecretkey
       - APP_ENV=production
     volumes:
-      - backend_data:/app/data
+      - ./backend/employment.db:/app/employment.db
       - ./backend/uploads:/app/uploads
     depends_on:
       redis:

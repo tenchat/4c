@@ -61,6 +61,15 @@ export const fetchSchoolWarnings = (params?: any) =>
 export const handleWarning = (warningId: string, data: any) =>
   request.put<any>({ url: `/api/v1/school/warnings/${warningId}`, data })
 
+export const generateWarnings = (params?: {
+  graduation_year?: number
+  dry_run?: boolean
+}) =>
+  request.post<any>({ url: '/api/v1/school/warnings/generate', data: params })
+
+export const generateStudentWarning = (profileId: string) =>
+  request.post<any>({ url: `/api/v1/school/warnings/generate/${profileId}` })
+
 export const fetchSchoolDataboard = (year?: number) =>
   request.get<any>({ url: '/api/v1/school/databoard', params: year ? { year } : undefined })
 

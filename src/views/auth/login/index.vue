@@ -210,7 +210,7 @@
         type: 'success',
         duration: 2500,
         zIndex: 10000,
-        message: `欢迎回来，${user.real_name || user.username}！`
+        message: `欢迎回来，${user.realName || user.userName || '用户'}！`
       })
     } catch (error: any) {
       ElNotification({

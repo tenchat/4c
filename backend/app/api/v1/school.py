@@ -284,6 +284,82 @@ async def handle_warning(
     return {"code": 200, "message": "处理成功"}
 
 
+@router.post("/warnings/generate")
+async def generate_warnings(
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    graduation_year: int = Query(None, description="毕业年份筛选，不传则包含所有年份"),
+    dry_run: bool = Query(False, description="试运行，不保存只返回结果"),
+):
+    """
+    触发预警生成
+
+    - **graduation_year**: 可选，按毕业年份筛选
+    - **dry_run**: 试运行模式，只计算不保存
+    """
+    university_id = await get_university_id(db, payload.get("sub"))
+
+    from app.services.warning_engine import WarningEngine
+    engine = WarningEngine(db)
+
+    result = engine.generate_warnings_for_university(
+        university_id=university_id,
+        graduation_year=graduation_year,
+        dry_run=dry_run,
+    )
+
+    level_map = {1: "红色预警", 2: "黄色预警", 3: "绿色提醒", 0: "无预警"}
+    summary = {
+        "total_students": result["total"],
+        "red_warnings": result["red"],
+        "yellow_warnings": result["yellow"],
+        "green_warnings": result["green"],
+        "no_warning": result["no_warning"],
+        "generated": result["generated"],
+        "skipped": result["skipped"],
+        "errors": result["errors"],
+    }
+
+    return {
+        "code": 200,
+        "message": "预警生成完成" if not dry_run else "试运行完成（未保存）",
+        "data": {
+            "summary": summary,
+            "dry_run": dry_run,
+        }
+    }
+
+
+@router.post("/warnings/generate/{profile_id}")
+async def generate_student_warning(
+    profile_id: str,
+    payload: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    为单个学生生成预警
+    """
+    university_id = await get_university_id(db, payload.get("sub"))
+
+    from app.services.warning_engine import WarningEngine
+    engine = WarningEngine(db)
+
+    result = await engine.generate_single_student_warning(profile_id, university_id)
+
+    if result is None:
+        return {
+            "code": 200,
+            "message": "该学生无需预警",
+            "data": None,
+        }
+
+    return {
+        "code": 200,
+        "message": "预警生成成功",
+        "data": result,
+    }
+
+
 @router.get("/databoard")
 async def databoard(
     payload: dict = Depends(get_current_user),
