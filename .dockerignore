@@ -1,44 +1,29 @@
-# Git
 .git
 .gitignore
-
-# IDE
 .vscode
 .idea
-*.md
+.history
 
-# 依赖
 node_modules
-__pycache__
-*.pyc
-.venv
-.pytest_cache
+dist
 
-# 环境文件
+backend/.venv
+backend/__pycache__
+backend/.pytest_cache
+RAG/__pycache__
+
+**/__pycache__
+*.pyc
+
+dataset
+backend/tests
+RAG/chroma_db
+RAG/chat_history
+
 .env
 .env.*
 !.env.docker
 
-# 日志
 *.log
-npm-debug.log*
-
-# 临时文件
 .DS_Store
 Thumbs.db
-*.tmp
-
-# 数据库 (容器内使用 volume 挂载)
-*.db
-!employment.db
-
-# 构建产物
-dist
-build
-*.egg-info
-
-# 测试
-.coverage
-htmlcov
-tests
-backend/tests

@@ -6,6 +6,7 @@ RAG 服务 FastAPI 入口
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -151,10 +152,13 @@ register_routes()
 if __name__ == "__main__":
     import uvicorn
 
+    # 容器默认禁用热重载，避免生产环境多进程监视开销。
+    reload_enabled = os.getenv("RAG_RELOAD", "false").lower() == "true"
+
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
         port=1145,
-        reload=True,
+        reload=reload_enabled,
         log_level="info",
     )

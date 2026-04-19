@@ -1,69 +1,78 @@
-version: '3.8'
-
 services:
-  # ========== 前端服务 ==========
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: cccc_frontend
     ports:
-      - '3006:3006'
+      - "3006:3006"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
     networks:
       - cccc_network
     restart: unless-stopped
 
-  # ========== 后端服务 ==========
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cccc_backend
     ports:
-      - '5174:5174'
+      - "5174:5174"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:////app/employment.db
-      - REDIS_URL=redis://redis:6379/0
-      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
-      - JWT_SECRET_KEY=resibacksecretkey
-      - APP_ENV=production
+      DATABASE_URL: sqlite+aiosqlite:///./employment.db
+      REDIS_URL: redis://redis:6379/0
+      RAG_SERVICE_URL: http://rag:1145
+      APP_ENV: production
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
     volumes:
       - ./backend/employment.db:/app/employment.db
       - ./backend/uploads:/app/uploads
     depends_on:
       redis:
         condition: service_healthy
+      rag:
+        condition: service_healthy
     networks:
       - cccc_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5174/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # ========== RAG 服务 ==========
   rag:
     build:
       context: ./RAG
       dockerfile: Dockerfile
     container_name: cccc_rag
     ports:
-      - '1145:1145'
+      - "1145:1145"
     environment:
-      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
-      - CHROMA_PERSIST_DIR=/app/chroma_db
-      - CHROMA_COLLECTION_NAME=rag
-      - CORS_ORIGINS=http://localhost:3006,http://localhost:5173
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      CHROMA_PERSIST_DIR: /app/chroma_db
+      CORS_ORIGINS: http://localhost:3006,http://localhost:5173
+      RAG_RELOAD: "false"
     volumes:
       - rag_data:/app/chroma_db
+      - ./RAG/chat_history:/app/chat_history
     networks:
       - cccc_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1145/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # ========== Redis 服务 ==========
   redis:
     image: redis:7-alpine
     container_name: cccc_redis
-    ports:
-      - '6379:6379'
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -71,9 +80,9 @@ services:
       - cccc_network
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 2s
-      timeout: 1s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 10
 
 networks:
@@ -81,6 +90,5 @@ networks:
     driver: bridge
 
 volumes:
-  backend_data:
   rag_data:
   redis_data:
