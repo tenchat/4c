@@ -30,8 +30,8 @@ services:
       - JWT_SECRET_KEY=resibacksecretkey
       - APP_ENV=production
     volumes:
-      - f:/repos/cccc/backend/employment.db:/app/employment.db
-      - f:/repos/cccc/backend/uploads:/app/uploads
+      - ./backend/employment.db:/app/employment.db
+      - ./backend/uploads:/app/uploads
     depends_on:
       redis:
         condition: service_healthy
