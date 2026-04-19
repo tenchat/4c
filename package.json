@@ -7,7 +7,7 @@
     "pnpm": ">=8.8.0"
   },
   "scripts": {
-    "dev": "vite --open --port 5173",
+    "dev": "vite --open",
     "build": "vite build",
     "serve": "vite preview",
     "lint": "eslint",

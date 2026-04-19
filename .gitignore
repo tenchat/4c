@@ -17,7 +17,6 @@ backend/.venv/
 **/__pycache__/
 *.pyc
 .pytest_cache/
-start.bat
 
 # IDE
 .vscode/
@@ -40,3 +39,5 @@ backend\employment.db
 .husky/
 backend/employment.db
 backend/employment.db
+.venv/
+.logs/
