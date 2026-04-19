@@ -11,7 +11,8 @@ services:
       - '3006:3006'
     environment:
       - VITE_PORT=3006
-      - VITE_API_PROXY_URL=http://backend:5174
+      - VITE_API_PROXY_URL=http://cccc_backend:5174
+      - VITE_API_BASE_URL=
     depends_on:
       backend:
         condition: service_healthy
