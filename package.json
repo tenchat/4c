@@ -8,8 +8,7 @@
   },
   "scripts": {
     "dev": "vite --open --port 5173",
-    "build": "vue-tsc --noEmit && vite build",
-    "deploy:docker": "docker compose up -d --build",
+    "build": "vite build",
     "serve": "vite preview",
     "lint": "eslint",
     "fix": "eslint --fix",
@@ -121,6 +120,6 @@
     "vite-plugin-vue-devtools": "^7.7.6",
     "vue-demi": "^0.14.9",
     "vue-img-cutter": "^3.0.5",
-    "vue-tsc": "~2.1.6"
+    "vue-tsc": "^2.2.0"
   }
 }

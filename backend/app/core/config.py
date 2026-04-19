@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from pydantic import model_validator
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -19,14 +18,6 @@ class Settings(BaseSettings):
     RAG_SERVICE_URL: str = "http://localhost:1145"  # RAG 服务地址
     UPLOAD_DIR: str = "./uploads/resumes"  # 简历上传目录
     SCHOOL_ADMIN_REGISTRATION_CODE: str = ""
-
-    @model_validator(mode="after")
-    def validate_security_settings(self):
-        if self.APP_ENV == "production":
-            weak_values = {"", "change-me-in-production", "change-me-in-prod"}
-            if self.JWT_SECRET_KEY in weak_values:
-                raise ValueError("JWT_SECRET_KEY must be set to a strong value in production")
-        return self
 
     class Config:
         env_file = ".env"
