@@ -19,7 +19,7 @@ timeout /t 2 /nobreak >nul
 REM Check dist
 echo [CHECK] Frontend dist...
 if not exist "%ROOT%\dist" (
-    echo [ERROR] dist not found. Run 3.bat first.
+    echo [ERROR] dist not found. Run install.bat first.
     pause
     exit /b 1
 )
@@ -28,7 +28,7 @@ echo [OK] dist exists
 REM Check shared venv
 echo [CHECK] Shared .venv...
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
-    echo [ERROR] .venv not found. Run 3.bat first.
+    echo [ERROR] .venv not found. Run install.bat first.
     pause
     exit /b 1
 )
@@ -43,7 +43,7 @@ start http://localhost:5173
 
 REM Start backend
 echo [INFO] Starting backend (port 5174)...
-start "Backend" cmd /k "cd /d "%ROOT%\backend" && ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 5174"
+start "Backend" cmd /k "cd /d "%ROOT%\backend" && set PYTHONPATH=%ROOT%\backend && ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 5174"
 
 REM Start RAG
 echo [INFO] Starting RAG (port 1145)...

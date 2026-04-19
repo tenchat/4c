@@ -120,6 +120,7 @@
     "vite-plugin-vue-devtools": "^7.7.6",
     "vue-demi": "^0.14.9",
     "vue-img-cutter": "^3.0.5",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.0",
+    "serve": "^14.2.6"
   }
 }

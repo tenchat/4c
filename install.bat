@@ -108,16 +108,48 @@ if %errorlevel% neq 0 (
 echo [OK] RAG installed
 cd ..
 
-REM Check env files
+REM Check/Create env files
 echo.
-if not exist "backend\.env" echo [WARN] backend\.env not found
-if not exist "RAG\.env" echo [WARN] RAG\.env not found
+if not exist "backend\.env" (
+    echo [INFO] Creating backend\.env with default values...
+    (
+        echo # Backend Environment
+        echo DATABASE_URL=sqlite+aiosqlite:///./employment.db
+        echo REDIS_URL=redis://localhost:6379/0
+        echo JWT_SECRET_KEY=change_this_secret_key_in_production
+        echo JWT_ALGORITHM=HS256
+        echo ACCESS_TOKEN_EXPIRE_MINUTES=15
+        echo REFRESH_TOKEN_EXPIRE_DAYS=7
+        echo APP_ENV=development
+        echo DASHSCOPE_API_KEY=your_api_key_here
+        echo CHROMA_PERSIST_DIR=./chroma_db
+        echo RAG_SERVICE_URL=http://localhost:1145
+    ) > "backend\.env"
+    echo [OK] backend\.env created
+)
+if not exist "RAG\.env" (
+    echo [INFO] Creating RAG\.env with default values...
+    (
+        echo # RAG Service Environment
+        echo DASHSCOPE_API_KEY=your_api_key_here
+        echo RAG_MD5_PATH=./md5.text
+        echo CHROMA_COLLECTION_NAME=rag
+        echo CHROMA_PERSIST_DIR=./chroma_db
+        echo CHUNK_SIZE=1000
+        echo CHUNK_OVERLAP=100
+        echo SIMILARITY_THRESHOLD=1
+        echo EMBEDDING_MODEL=text-embedding-v4
+        echo CHAT_MODEL=qwen3-max
+        echo CORS_ORIGINS=http://localhost:5173
+    ) > "RAG\.env"
+    echo [OK] RAG\.env created
+)
 
 echo.
 echo ============================================
 echo   Done!
 echo ============================================
 echo.
-echo Next: edit backend\.env and RAG\.env, then run start.bat
+echo Next: edit backend\.env and RAG\.env with your API keys, then run start.bat
 echo.
 pause

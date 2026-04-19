@@ -5,6 +5,9 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+if not settings.DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set. Please configure backend/.env file.")
+
 # 根据DATABASE_URL判断数据库类型
 is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 

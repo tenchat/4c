@@ -78,13 +78,41 @@ cd RAG
 echo "[OK] RAG installed"
 cd ..
 
-# Check env files
+# Check/Create env files
 echo ""
 if [ ! -f "backend/.env" ]; then
-    echo "[WARN] backend/.env not found"
+    echo "[INFO] Creating backend/.env with default values..."
+    cat > backend/.env << 'EOF'
+# Backend Environment
+DATABASE_URL=sqlite+aiosqlite:///./employment.db
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET_KEY=change_this_secret_key_in_production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+APP_ENV=development
+DASHSCOPE_API_KEY=your_api_key_here
+CHROMA_PERSIST_DIR=./chroma_db
+RAG_SERVICE_URL=http://localhost:1145
+EOF
+    echo "[OK] backend/.env created"
 fi
 if [ ! -f "RAG/.env" ]; then
-    echo "[WARN] RAG/.env not found"
+    echo "[INFO] Creating RAG/.env with default values..."
+    cat > RAG/.env << 'EOF'
+# RAG Service Environment
+DASHSCOPE_API_KEY=your_api_key_here
+RAG_MD5_PATH=./md5.text
+CHROMA_COLLECTION_NAME=rag
+CHROMA_PERSIST_DIR=./chroma_db
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=100
+SIMILARITY_THRESHOLD=1
+EMBEDDING_MODEL=text-embedding-v4
+CHAT_MODEL=qwen3-max
+CORS_ORIGINS=http://localhost:5173
+EOF
+    echo "[OK] RAG/.env created"
 fi
 
 echo ""
@@ -92,5 +120,5 @@ echo "============================================"
 echo "  Done!"
 echo "============================================"
 echo ""
-echo "Next: edit backend/.env and RAG/.env, then run start-all.sh"
+echo "Next: edit backend/.env and RAG/.env with your API keys, then run start-all.sh"
 echo ""
