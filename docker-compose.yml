@@ -24,7 +24,7 @@ services:
     ports:
       - '5174:5174'
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./data/employment.db
+      - DATABASE_URL=sqlite+aiosqlite:///./employment.db
       - REDIS_URL=redis://redis:6379/0
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
       - JWT_SECRET_KEY=resibacksecretkey
