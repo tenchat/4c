@@ -105,7 +105,34 @@
           </div>
         </div>
 
-        <!-- AI工具 -->
+        <!-- 简历统计 -->
+        <div class="card">
+          <div class="card-header">
+            <span>简历统计</span>
+            <el-button link type="primary" @click="$router.push('/company/resumes')">
+              全部
+            </el-button>
+          </div>
+          <div class="card-body">
+            <div v-if="resumeStats.total > 0" class="app-stats">
+              <div class="app-stat">
+                <span class="stat-num">{{ resumeStats.total }}</span>
+                <span class="stat-label">收到简历</span>
+              </div>
+              <div class="app-stat">
+                <span class="stat-num">{{ resumeStats.viewed }}</span>
+                <span class="stat-label">已查看</span>
+              </div>
+              <div class="app-stat">
+                <span class="stat-num">{{ resumeStats.interested }}</span>
+                <span class="stat-label">感兴趣</span>
+              </div>
+            </div>
+            <el-empty v-else description="暂无简历记录" :image-size="50" />
+          </div>
+        </div>
+
+        <!-- AI工具 start
         <div class="card">
           <div class="card-header">
             <span>AI助手</span>
@@ -127,6 +154,7 @@
             </div>
           </div>
         </div>
+        AI工具 end -->
       </div>
 
       <!-- 中间栏 -->
@@ -184,33 +212,6 @@
 
       <!-- 右侧栏 -->
       <div class="right-column">
-        <!-- 简历统计 -->
-        <div class="card">
-          <div class="card-header">
-            <span>简历统计</span>
-            <el-button link type="primary" @click="$router.push('/company/resumes')">
-              全部
-            </el-button>
-          </div>
-          <div class="card-body">
-            <div v-if="resumeStats.total > 0" class="app-stats">
-              <div class="app-stat">
-                <span class="stat-num">{{ resumeStats.total }}</span>
-                <span class="stat-label">收到简历</span>
-              </div>
-              <div class="app-stat">
-                <span class="stat-num">{{ resumeStats.viewed }}</span>
-                <span class="stat-label">已查看</span>
-              </div>
-              <div class="app-stat">
-                <span class="stat-num">{{ resumeStats.interested }}</span>
-                <span class="stat-label">感兴趣</span>
-              </div>
-            </div>
-            <el-empty v-else description="暂无简历记录" :image-size="50" />
-          </div>
-        </div>
-
         <!-- 岗位分布 -->
         <div class="card">
           <div class="card-header">
@@ -238,24 +239,39 @@
           </div>
         </div>
 
-        <!-- 最新动态 -->
-        <div class="card">
+        <!-- 最新投递 -->
+        <div class="card" style="flex: 1">
           <div class="card-header">
-            <span>最新动态</span>
+            <span>最新投递</span>
+            <el-button link type="primary" @click="$router.push('/company/resumes')">
+              查看全部
+            </el-button>
           </div>
-          <div class="card-body">
-            <div v-if="recentActivities.length" class="activity-list">
-              <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-                <div class="activity-icon">
-                  <el-icon :color="activity.color"><component :is="activity.icon" /></el-icon>
+          <div class="card-body" style="flex: 1">
+            <div v-if="recentResumes.length" class="resume-activity-list">
+              <div
+                v-for="item in recentResumes"
+                :key="item.application_id"
+                class="resume-activity-item"
+              >
+                <div class="resume-activity-avatar">
+                  {{ (item.student_name || '学').charAt(0) }}
                 </div>
-                <div class="activity-content">
-                  <span class="activity-text">{{ activity.text }}</span>
-                  <span class="activity-time">{{ activity.time }}</span>
+                <div class="resume-activity-content">
+                  <div class="resume-activity-top">
+                    <span class="resume-activity-name">{{ item.student_name }}</span>
+                    <el-tag :type="getResumeStatusType(item.status)" size="small">
+                      {{ getResumeStatusText(item.status) }}
+                    </el-tag>
+                  </div>
+                  <div class="resume-activity-meta">
+                    <span>{{ item.job_title }}</span>
+                    <span>{{ formatResumeDate(item.applied_at) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <el-empty v-else description="暂无最新动态" :image-size="50" />
+            <el-empty v-else description="暂无简历投递" :image-size="50" />
           </div>
         </div>
       </div>
@@ -271,14 +287,11 @@
     Plus,
     List,
     Document,
-    DataAnalysis,
-    Connection,
-    ChatDotRound,
     Location,
     DataLine,
     ArrowRight
   } from '@element-plus/icons-vue'
-  import { fetchCompanyDashboard, fetchCompanyJobs } from '@/api/company'
+  import { fetchCompanyDashboard, fetchCompanyJobs, fetchCompanyResumes } from '@/api/company'
   import ArtStatsCard from '@/components/core/cards/art-stats-card/index.vue'
 
   defineOptions({ name: 'CompanyDashboard' })
@@ -314,10 +327,53 @@
     status: number
   }
 
+  interface ResumeItem {
+    application_id: string
+    job_id: string
+    job_title: string
+    student_name: string
+    status: number
+    applied_at: string
+  }
+
   const jobStatusList = ref<Job[]>([])
   const jobStatusCount = ref<Record<string, number>>({})
   const resumeStats = ref({ total: 0, viewed: 0, interested: 0 })
-  const recentActivities = ref<any[]>([])
+  const recentResumes = ref<ResumeItem[]>([])
+
+  // 简历状态映射
+  const getResumeStatusText = (status: number) => {
+    const map: Record<number, string> = {
+      0: '已投递',
+      1: '简历筛选',
+      2: '面试中',
+      3: '已录用',
+      4: '已拒绝'
+    }
+    return map[status] || '未知'
+  }
+
+  const getResumeStatusType = (
+    status: number
+  ): 'success' | 'warning' | 'info' | 'danger' | 'primary' => {
+    const map: Record<number, 'success' | 'warning' | 'info' | 'danger' | 'primary'> = {
+      0: 'info',
+      1: 'warning',
+      2: 'primary',
+      3: 'success',
+      4: 'danger'
+    }
+    return map[status] || 'info'
+  }
+
+  const formatResumeDate = (dateStr: string) => {
+    if (!dateStr) return '-'
+    return new Date(dateStr).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
 
   const scaleText = computed(() => {
     const map: Record<number, string> = {
@@ -382,16 +438,27 @@
     router.push(`/company/post-job?id=${row.job_id}`)
   }
 
+  const loadRecentResumes = async () => {
+    try {
+      const res: any = await fetchCompanyResumes({ page: 1, page_size: 5 })
+      if (res?.list) {
+        recentResumes.value = res.list
+      }
+    } catch (error) {
+      console.error('获取最近简历失败:', error)
+    }
+  }
+
   onMounted(async () => {
-    await Promise.all([loadCompanyProfile(), loadJobs()])
+    await Promise.all([loadCompanyProfile(), loadJobs(), loadRecentResumes()])
   })
 </script>
 
 <style lang="scss" scoped>
   .company-dashboard {
     min-height: 100vh;
-    background: #f0f2f5;
     padding-bottom: 24px;
+    background: #f0f2f5;
   }
 
   // 顶部标题栏
@@ -405,14 +472,14 @@
 
     .header-left {
       display: flex;
-      align-items: baseline;
       gap: 10px;
+      align-items: baseline;
 
       .page-title {
+        margin: 0;
         font-size: 18px;
         font-weight: 600;
         color: #1a1a1a;
-        margin: 0;
       }
 
       .page-subtitle {
@@ -423,8 +490,8 @@
 
     .header-right {
       display: flex;
-      align-items: center;
       gap: 16px;
+      align-items: center;
     }
   }
 
@@ -458,20 +525,20 @@
 
   // 卡片样式
   .card {
-    background: #fff;
-    border-radius: 10px;
-    border: 1px solid #eee;
     overflow: hidden;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
 
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px;
-      border-bottom: 1px solid #f0f0f0;
       font-size: 14px;
       font-weight: 500;
       color: #1a1a1a;
+      border-bottom: 1px solid #f0f0f0;
     }
 
     .card-body {
@@ -488,8 +555,8 @@
 
   .info-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
 
     .info-label {
       font-size: 13px;
@@ -498,8 +565,8 @@
 
     .info-value {
       font-size: 13px;
-      color: #1a1a1a;
       font-weight: 500;
+      color: #1a1a1a;
     }
   }
 
@@ -512,14 +579,14 @@
     .ai-tool {
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 6px;
+      align-items: center;
       padding: 14px 8px;
+      color: #606266;
+      cursor: pointer;
       background: #f5f7fa;
       border-radius: 8px;
-      cursor: pointer;
       transition: background 0.2s;
-      color: #606266;
 
       &:hover {
         background: #e8ecf1;
@@ -546,20 +613,20 @@
 
   .job-item {
     padding: 12px;
+    cursor: pointer;
     border: 1px solid #f0f0f0;
     border-radius: 6px;
-    cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      border-color: #409eff;
       background: #fafafa;
+      border-color: #409eff;
     }
 
     .job-info {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       margin-bottom: 6px;
 
       .job-title {
@@ -577,22 +644,22 @@
 
       .job-city {
         display: flex;
-        align-items: center;
         gap: 4px;
+        align-items: center;
       }
 
       .job-salary {
-        color: #f56c6c;
         font-weight: 500;
+        color: #f56c6c;
       }
     }
   }
 
   // 数据大屏入口
   .databoard-card {
-    border: none;
-    background: linear-gradient(135deg, #e8f4f8 0%, #dbeafe 100%);
     cursor: pointer;
+    background: linear-gradient(135deg, #e8f4f8 0%, #dbeafe 100%);
+    border: none;
     transition: transform 0.2s;
 
     &:hover {
@@ -602,24 +669,24 @@
 
   .databoard-content {
     display: flex;
-    align-items: center;
     gap: 16px;
+    align-items: center;
     padding: 4px;
 
     .databoard-icon {
-      width: 48px;
-      height: 48px;
-      background: #fff;
-      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 48px;
+      height: 48px;
       color: #409eff;
+      background: #fff;
+      border-radius: 8px;
     }
 
     .databoard-text {
-      flex: 1;
       display: flex;
+      flex: 1;
       flex-direction: column;
       gap: 4px;
 
@@ -675,22 +742,22 @@
 
   .activity-item {
     display: flex;
-    align-items: flex-start;
     gap: 10px;
+    align-items: flex-start;
 
     .activity-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 28px;
       height: 28px;
       background: #f5f7fa;
       border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .activity-content {
-      flex: 1;
       display: flex;
+      flex: 1;
       flex-direction: column;
       gap: 2px;
 
@@ -706,6 +773,67 @@
     }
   }
 
+  // 最新投递
+  .resume-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .resume-activity-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .resume-activity-avatar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #409eff, #66b1ff);
+    border-radius: 50%;
+  }
+
+  .resume-activity-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .resume-activity-top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .resume-activity-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .resume-activity-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #8c8c8c;
+  }
+
   // 空状态
   :deep(.el-empty) {
     padding: 12px 0;
@@ -717,33 +845,37 @@
   }
 
   // 响应式
-  @media (max-width: 1200px) {
+  @media (width <= 1200px) {
     .main-content {
       grid-template-columns: 1fr 1fr;
     }
+
     .right-column {
       grid-column: span 2;
     }
   }
 
-  @media (max-width: 768px) {
+  @media (width <= 768px) {
     .stat-row {
       flex-wrap: wrap;
       gap: 8px;
       padding: 16px;
     }
+
     .main-content {
       grid-template-columns: 1fr;
       padding: 0 16px;
     }
+
     .right-column {
       grid-column: auto;
     }
+
     .page-header {
-      padding: 12px 16px;
       flex-direction: column;
-      align-items: flex-start;
       gap: 12px;
+      align-items: flex-start;
+      padding: 12px 16px;
     }
   }
 </style>

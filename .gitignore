@@ -37,3 +37,4 @@ src/types/import/components.d.ts
 
 backend\employment.db
 .history/
+.husky/

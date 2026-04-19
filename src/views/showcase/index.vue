@@ -462,8 +462,8 @@
               <img src="/u1.png" alt="tenchat" class="team-avatar" />
               <p class="team-name">tenchat</p>
             </a>
-            <a href="https://github.com/LEO_Jackwei" target="_blank" class="team-member">
-              <img src="/u2.jpg" alt="LEO_Jackwei" class="team-avatar" />
+            <a href="https://github.com/2586247032-a11y" target="_blank" class="team-member">
+              <img src="/u2.jpg" alt="LEO_Jackhwei" class="team-avatar" />
               <p class="team-name">LEO_Jackwei</p>
             </a>
           </div>
@@ -474,6 +474,51 @@
             >本项目由参赛团队独立设计与开发，所有核心功能、架构设计与界面实现均为原创。AI
             工具仅用于辅助开发与特定业务场景（详见上方功能清单），不涉及作品核心创意的生成。</p
           >
+        </div>
+      </div>
+    </section>
+
+    <!-- 地图合规说明 -->
+    <section class="section compliance-section">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-title">
+            <el-icon><WarningFilled /></el-icon>
+            <h2>地图合规说明</h2>
+          </div>
+          <p class="section-subtitle">本平台严格遵守国家地图管理相关规定</p>
+        </div>
+
+        <div class="compliance-card">
+          <div class="compliance-item">
+            <h4>
+              <el-icon><MapLocation /></el-icon>
+              地图数据来源
+            </h4>
+            <p>
+              本平台使用的中国地图数据来源于<strong>阿里云 DataV.GeoAtlas</strong
+              >（https://datav.aliyun.com），该数据源具备自然资源部核发的有效地图审图号：
+              <strong>GS(2025)5996 号</strong>。
+            </p>
+          </div>
+          <div class="compliance-item">
+            <h4>
+              <el-icon><CircleCheck /></el-icon>
+              合规声明
+            </h4>
+            <p
+              >本平台地图仅用于高校毕业生就业数据可视化分析，不作为正式出版地图或商业地图使用。地图边界仅供参考，不具备法律效力。</p
+            >
+          </div>
+          <div class="compliance-item">
+            <h4>
+              <el-icon><InfoFilled /></el-icon>
+              使用说明
+            </h4>
+            <p
+              >作品中涉及疆域的地图已明确标注来源和审图号，符合《地图管理条例》及《公开地图内容表示规范》要求。</p
+            >
+          </div>
         </div>
       </div>
     </section>
@@ -510,7 +555,10 @@
     MagicStick,
     Folder,
     Tools,
-    Top
+    Top,
+    MapLocation,
+    CircleCheck,
+    InfoFilled
   } from '@element-plus/icons-vue'
 
   defineOptions({ name: 'Showcase' })
@@ -1301,6 +1349,41 @@
     font-size: 13px;
     line-height: 1.8;
     color: var(--text-light);
+  }
+
+  /* 地图合规说明 */
+  .compliance-section {
+    background: var(--bg-light);
+  }
+
+  .compliance-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 32px;
+    background: var(--bg-white);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px var(--shadow);
+  }
+
+  .compliance-item h4 {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .compliance-item h4 .el-icon {
+    color: var(--primary);
+  }
+
+  .compliance-item p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-muted);
   }
 
   /* Footer */

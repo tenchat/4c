@@ -37,6 +37,9 @@ importers:
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
+      echarts-wordcloud:
+        specifier: ^2.1.0
+        version: 2.1.0(echarts@6.0.0)
       element-plus:
         specifier: ^2.11.2
         version: 2.11.4(vue@3.5.22(typescript@5.6.3))
@@ -61,6 +64,9 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^4.3.0
         version: 4.5.0(pinia@3.0.3(typescript@5.6.3)(vue@3.5.22(typescript@5.6.3)))
+      pnpm:
+        specifier: ^10.33.0
+        version: 10.33.0
       qrcode.vue:
         specifier: ^3.6.0
         version: 3.6.0(vue@3.5.22(typescript@5.6.3))
@@ -2971,6 +2977,14 @@ packages:
       }
     engines: { node: '>= 0.4' }
 
+  echarts-wordcloud@2.1.0:
+    resolution:
+      {
+        integrity: sha512-Kt1JmbcROgb+3IMI48KZECK2AP5lG6bSsOEs+AsuwaWJxQom31RTNd6NFYI01E/YaI1PFZeueaupjlmzSQasjQ==
+      }
+    peerDependencies:
+      echarts: ^5.0.1
+
   echarts@6.0.0:
     resolution:
       {
@@ -5090,6 +5104,14 @@ packages:
       {
         integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==
       }
+
+  pnpm@10.33.0:
+    resolution:
+      {
+        integrity: sha512-EFaLtKavtYyes2MNqQzJUWQXq+vT+rvmc58K55VyjaFJHp21pUTHatjrdXD1xLs9bGN7LLQb/c20f6gjyGSTGQ==
+      }
+    engines: { node: '>=18.12' }
+    hasBin: true
 
   postcss-html@1.8.0:
     resolution:
@@ -8119,6 +8141,10 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
+  echarts-wordcloud@2.1.0(echarts@6.0.0):
+    dependencies:
+      echarts: 6.0.0
+
   echarts@6.0.0:
     dependencies:
       tslib: 2.3.0
@@ -9274,6 +9300,8 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.7
       pathe: 2.0.3
+
+  pnpm@10.33.0: {}
 
   postcss-html@1.8.0:
     dependencies:

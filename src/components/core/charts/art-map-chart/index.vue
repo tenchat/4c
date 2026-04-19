@@ -6,6 +6,11 @@
     </div>
 
     <div v-else id="china-map" ref="chinaMapRef" class="h-full w-full overflow-hidden rounded-lg" />
+
+    <!-- 地图来源标注 -->
+    <div class="absolute bottom-2 right-3 text-xs text-gray-400 z-10">
+      地图来源：阿里云 DataV.GeoAtlas（审图号：GS(2025)5996 号）
+    </div>
   </div>
 </template>
 
