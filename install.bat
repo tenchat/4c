@@ -84,7 +84,7 @@ REM Backend dependencies
 echo.
 echo [INFO] Installing backend...
 cd backend
-..\.venv\Scripts\pip install -r requirements.txt >nul 2>&1
+..\.venv\Scripts\pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo [ERROR] Backend install failed
     cd ..
@@ -98,7 +98,7 @@ REM RAG dependencies
 echo.
 echo [INFO] Installing RAG...
 cd RAG
-..\.venv\Scripts\pip install -r requirements.txt >nul 2>&1
+..\.venv\Scripts\pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo [ERROR] RAG install failed
     cd ..
