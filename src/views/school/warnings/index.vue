@@ -16,16 +16,16 @@
       <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
         <template #left>
           <ElSpace wrap>
-            <ElButton type="success" :loading="generating" @click="handleGenerateWarnings" v-ripple>
+            <ElButton type="primary" :loading="generating" @click="handleGenerateWarnings" v-ripple>
               生成预警
             </ElButton>
             <ElButton
-              type="primary"
+              type="danger"
               :disabled="selectedRows.length === 0"
               @click="handleBatchHandle"
               v-ripple
             >
-              批量标记已处理 ({{ selectedRows.length }})
+              批量处理 ({{ selectedRows.length }})
             </ElButton>
           </ElSpace>
         </template>
@@ -67,6 +67,56 @@
           <ElButton type="primary" @click="handleMarkProcessed">标记已处理</ElButton>
         </template>
       </ElDialog>
+
+      <!-- 预警生成结果弹窗 -->
+      <ElDialog v-model="showGenerateResult" title="预警生成结果" width="900px">
+        <div v-if="generateResult">
+          <ElAlert type="success" :closable="false" class="mb-4">
+            共扫描 {{ generateResult.summary?.total_students || 0 }} 名学生，生成预警
+            {{ generateResult.summary?.generated || 0 }} 条（红色
+            {{ generateResult.summary?.red_warnings || 0 }} / 黄色
+            {{ generateResult.summary?.yellow_warnings || 0 }} / 绿色
+            {{ generateResult.summary?.green_warnings || 0 }}）
+          </ElAlert>
+
+          <ElTable :data="generateResult.warnings?.list || []" stripe max-height="400" size="small">
+            <ElTableColumn prop="student_no" label="学号" width="120" />
+            <ElTableColumn prop="student_name" label="姓名" width="80" />
+            <ElTableColumn prop="college" label="学院" min-width="120" />
+            <ElTableColumn prop="major" label="专业" min-width="120" />
+            <ElTableColumn prop="warning_type" label="预警类型" width="100">
+              <template #default="{ row }">
+                {{ WARNING_TYPE_MAP[row.warning_type] || row.warning_type }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn prop="level" label="级别" width="80">
+              <template #default="{ row }">
+                <ElTag size="small" :type="(WARNING_LEVEL_MAP[row.level]?.type || 'info') as any">
+                  {{ WARNING_LEVEL_MAP[row.level]?.text }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+          </ElTable>
+
+          <div class="flex justify-end mt-4">
+            <ElPagination
+              v-model:current-page="generatePage"
+              v-model:page-size="generatePageSize"
+              :total="generateResult.warnings?.total || 0"
+              :page-sizes="[10, 20, 50, 100]"
+              layout="total, sizes, prev, pager, next"
+              @size-change="handleGenerateResultPageSizeChange"
+              @current-change="handleGenerateResultPageChange"
+            />
+          </div>
+        </div>
+        <template #footer>
+          <ElButton @click="showGenerateResult = false">关闭</ElButton>
+        </template>
+      </ElDialog>
+
+      <!-- 学生详情弹窗 -->
+      <StudentProfileDialog v-model="showProfileDialog" :profile-id="currentProfileId" />
     </ElCard>
   </div>
 </template>
@@ -75,17 +125,30 @@
   import { fetchSchoolWarnings, handleWarning, generateWarnings } from '@/api/school'
   import { useTable } from '@/hooks/core/useTable'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
+  import StudentProfileDialog from '@/components/school/student-profile-dialog/index.vue'
   import { ElTag, ElMessage, ElMessageBox } from 'element-plus'
 
   defineOptions({ name: 'SchoolWarnings' })
 
   interface WarningItem {
     warning_id: string
-    account_id: string
+    profile_id: string
+    account_id?: string
+    student_no?: string
+    student_name?: string
+    college?: string
+    major?: string
+    graduation_year?: number
+    employment_status?: number
+    cur_company?: string
+    cur_city?: string
+    desire_city?: string
+    profile_complete?: number
     warning_type: string
     level: number
     ai_suggestion?: string
     handled: boolean
+    handled_at?: string
     created_at: string
   }
 
@@ -101,11 +164,18 @@
   const aiAdviceVisible = ref(false)
   const currentAdvice = ref<AdviceDetail | null>(null)
   const currentWarningId = ref<string>('')
+  const showProfileDialog = ref(false)
+  const currentProfileId = ref<string>('')
   const generating = ref(false)
+  const showGenerateResult = ref(false)
+  const generateResult = ref<any>(null)
+  const generatePage = ref(1)
+  const generatePageSize = ref(20)
 
   const searchForm = ref({
-    level: undefined,
-    handled: undefined
+    level: undefined as number | undefined,
+    handled: undefined as boolean | undefined,
+    warning_type: undefined as string | undefined
   })
 
   const WARNING_LEVEL_MAP: Record<number, { type: string; text: string }> = {
@@ -115,19 +185,18 @@
   }
 
   const WARNING_TYPE_MAP: Record<string, string> = {
-    long_term_unemployed: '长期未就业',
-    skill_gap: '技能差距',
-    high_expectation: '期望过高',
-    location_limit: '地域限制',
-    experience_lack: '经验缺乏',
+    unemployed_long_term: '长期未就业',
     profile_incomplete: '档案不完整',
-    general: '一般预警'
+    salary_low: '薪资偏低',
+    no_internship: '无实习经验',
+    no_skills: '技能特长缺失'
   }
 
-  const adviceTypeMap: Record<string, any> = {
-    warning: 'warning',
-    error: 'danger',
-    info: 'info'
+  const EMPLOYMENT_STATUS_MAP: Record<number, string> = {
+    0: '待就业',
+    1: '已就业',
+    2: '升学',
+    3: '出国'
   }
 
   const {
@@ -136,7 +205,7 @@
     data,
     loading,
     pagination,
-    getData,
+    fetchData,
     replaceSearchParams,
     resetSearchParams,
     handleSizeChange,
@@ -146,23 +215,39 @@
     core: {
       apiFn: fetchSchoolWarnings as any,
       apiParams: {
-        current: 1,
-        size: 20,
+        page: 1,
+        page_size: 20,
         ...searchForm.value
+      },
+      paginationKey: {
+        current: 'page',
+        size: 'page_size'
       },
       columnsFactory: () => [
         { type: 'selection', width: 60 },
         { type: 'index', width: 60, label: '序号' },
-        { prop: 'account_id', label: '学生账号', width: 180 },
+        { prop: 'student_no', label: '学号', width: 130 },
+        { prop: 'student_name', label: '姓名', width: 90 },
+        { prop: 'college', label: '学院', minWidth: 140 },
+        { prop: 'major', label: '专业', minWidth: 140 },
+        { prop: 'graduation_year', label: '毕业年份', width: 100 },
+        {
+          prop: 'employment_status',
+          label: '就业状态',
+          width: 90,
+          formatter: (row: WarningItem) => {
+            const empStatus = row.employment_status ?? 0
+            const status = empStatus === 1 ? 'success' : 'info'
+            const text = EMPLOYMENT_STATUS_MAP[empStatus] || '未知'
+            return h(ElTag, { type: status, size: 'small' }, () => text)
+          }
+        },
         {
           prop: 'warning_type',
           label: '预警类型',
-          width: 180,
-          formatter: (row: WarningItem) => {
-            const types = (row.warning_type || '').split(',')
-            const labels = types.map((t: string) => WARNING_TYPE_MAP[t] || t).filter(Boolean)
-            return labels.length > 0 ? labels.join(', ') : '未知'
-          }
+          width: 120,
+          formatter: (row: WarningItem) =>
+            WARNING_TYPE_MAP[row.warning_type] || row.warning_type || '未知'
         },
         {
           prop: 'level',
@@ -173,21 +258,29 @@
             return h(ElTag, { type: config.type as any }, () => config.text)
           }
         },
+        { prop: 'cur_city', label: '当前城市', minWidth: 100 },
+        { prop: 'desire_city', label: '期望城市', minWidth: 100 },
+        {
+          prop: 'profile_complete',
+          label: '档案完整度',
+          width: 100,
+          formatter: (row: WarningItem) => `${row.profile_complete || 0}%`
+        },
         {
           prop: 'handled',
           label: '处理状态',
-          width: 100,
+          width: 90,
           formatter: (row: WarningItem) => {
             const type = row.handled ? 'success' : 'info'
             const text = row.handled ? '已处理' : '待处理'
-            return h(ElTag, { type }, () => text)
+            return h(ElTag, { type, size: 'small' }, () => text)
           }
         },
-        { prop: 'created_at', label: '创建时间', width: 180 },
+        { prop: 'created_at', label: '创建时间', width: 170 },
         {
           prop: 'operation',
           label: '操作',
-          width: 180,
+          width: 240,
           fixed: 'right',
           formatter: (row: WarningItem) =>
             h('div', [
@@ -199,6 +292,11 @@
                 onClick: () => showAdvice(row)
               }),
               h(ArtButtonTable, {
+                type: 'view',
+                title: '查看档案',
+                onClick: () => handleViewProfile(row)
+              }),
+              h(ArtButtonTable, {
                 type: 'edit',
                 title: '处理',
                 disabled: row.handled,
@@ -207,6 +305,14 @@
             ])
         }
       ]
+    },
+    transform: {
+      responseAdapter: (response: any) => ({
+        records: response?.list || [],
+        total: response?.total || 0,
+        current: response?.page || 1,
+        size: response?.page_size || 20
+      })
     }
   })
 
@@ -236,34 +342,26 @@
         ],
         clearable: true
       }
+    },
+    {
+      key: 'warning_type',
+      label: '预警类型',
+      type: 'select' as const,
+      props: {
+        placeholder: '请选择',
+        options: Object.entries(WARNING_TYPE_MAP).map(([value, text]) => ({ label: text, value })),
+        clearable: true
+      }
     }
   ])
 
   const handleSearch = (params: Record<string, unknown>) => {
     replaceSearchParams(params)
-    getData()
+    fetchData()
   }
 
   const handleReset = () => {
     resetSearchParams()
-  }
-
-  const handleGenerateWarnings = async () => {
-    generating.value = true
-    try {
-      const res = await generateWarnings()
-      if (res.code === 200) {
-        ElMessage.success(res.message || '预警生成完成')
-        refreshData()
-      } else {
-        ElMessage.error(res.message || '预警生成失败')
-      }
-    } catch (error) {
-      console.error('生成预警失败:', error)
-      ElMessage.error('生成预警失败')
-    } finally {
-      generating.value = false
-    }
   }
 
   const handleSelectionChange = (selection: WarningItem[]) => {
@@ -272,10 +370,10 @@
 
   const showAdvice = (row: WarningItem) => {
     currentWarningId.value = row.warning_id
+    const levelType = WARNING_LEVEL_MAP[row.level]?.type
     currentAdvice.value = {
-      title: `学生 ${row.account_id} 的就业预警`,
-      level: WARNING_LEVEL_MAP[row.level]?.type === 'danger' ? 'error' :
-             WARNING_LEVEL_MAP[row.level]?.type === 'warning' ? 'warning' : 'info',
+      title: `学生 ${row.student_name || row.account_id} 的就业预警`,
+      level: levelType === 'danger' ? 'error' : levelType === 'warning' ? 'warning' : 'info',
       analysis: row.ai_suggestion || '该学生长期未找到合适工作，需要重点关注和个性化辅导。',
       suggestion: '建议与学生进行一对一沟通，了解其求职意向和困难点，同时推荐相关岗位资源。',
       actions: [
@@ -327,7 +425,9 @@
         '批量处理',
         { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
       )
-      const promises = selectedRows.value.map((row) => handleWarning(row.warning_id, { handled: true }))
+      const promises = selectedRows.value.map((row) =>
+        handleWarning(row.warning_id, { handled: true })
+      )
       await Promise.all(promises)
       ElMessage.success('批量处理成功')
       refreshData()
@@ -337,11 +437,68 @@
       }
     }
   }
+
+  const handleGenerateWarnings = async () => {
+    try {
+      generating.value = true
+      const res = await generateWarnings({
+        page: generatePage.value,
+        page_size: generatePageSize.value
+      })
+      generateResult.value = res.data || {}
+      showGenerateResult.value = true
+      refreshData()
+    } catch (error: any) {
+      ElMessage.error(error.message || '生成预警失败')
+    } finally {
+      generating.value = false
+    }
+  }
+
+  const handleGenerateResultPageChange = async (page: number) => {
+    generatePage.value = page
+    try {
+      const res = await generateWarnings({
+        page: generatePage.value,
+        page_size: generatePageSize.value
+      })
+      if (generateResult.value) {
+        generateResult.value.warnings = res.data?.warnings || res.data
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '获取失败')
+    }
+  }
+
+  const handleGenerateResultPageSizeChange = async (size: number) => {
+    generatePageSize.value = size
+    generatePage.value = 1
+    try {
+      const res = await generateWarnings({
+        page: generatePage.value,
+        page_size: generatePageSize.value
+      })
+      if (generateResult.value) {
+        generateResult.value.warnings = res.data?.warnings || res.data
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '获取失败')
+    }
+  }
+
+  const handleViewProfile = (row: WarningItem) => {
+    currentProfileId.value = row.profile_id
+    showProfileDialog.value = true
+  }
 </script>
 
 <style scoped>
   .page-school-warnings {
     padding: 20px;
+  }
+
+  .art-table-card {
+    width: 100%;
   }
 
   .ai-advice-content {

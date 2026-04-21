@@ -577,17 +577,20 @@ class SchoolService:
             raise e
 
     async def get_warnings(self, university_id: str, filters: dict) -> dict:
-        """获取预警列表"""
+        """获取预警列表，关联学生信息"""
         page = filters.get("page", 1)
         page_size = filters.get("page_size", 10)
         handled = filters.get("handled")
         level = filters.get("level")
+        warning_type = filters.get("warning_type")
 
         conditions = [EmploymentWarning.university_id == university_id]
         if handled is not None:
             conditions.append(EmploymentWarning.handled == handled)
         if level:
             conditions.append(EmploymentWarning.level == level)
+        if warning_type:
+            conditions.append(EmploymentWarning.warning_type == warning_type)
 
         # 查询总数
         count_result = await self.db.execute(
@@ -595,27 +598,49 @@ class SchoolService:
         )
         total = count_result.scalar() or 0
 
-        # 分页查询
+        # 分页查询，关联学生档案和账户信息
         offset = (page - 1) * page_size
         result = await self.db.execute(
-            select(EmploymentWarning)
+            select(EmploymentWarning, StudentProfile, Account)
+            .join(StudentProfile, EmploymentWarning.profile_id == StudentProfile.profile_id, isouter=True)
+            .join(Account, StudentProfile.account_id == Account.account_id, isouter=True)
             .where(and_(*conditions))
             .order_by(EmploymentWarning.created_at.desc())
             .offset(offset)
             .limit(page_size)
         )
-        warnings = result.scalars().all()
+        rows = result.all()
+
+        items = []
+        for row in rows:
+            warning = row[0]
+            student = row[1] if len(row) > 1 else None
+            account = row[2] if len(row) > 2 else None
+
+            items.append({
+                "warning_id": warning.warning_id,
+                "profile_id": warning.profile_id,
+                "account_id": student.account_id if student else None,
+                "student_no": student.student_no if student else None,
+                "student_name": account.real_name if account else None,
+                "college": student.college if student else None,
+                "major": student.major if student else None,
+                "graduation_year": student.graduation_year if student else None,
+                "employment_status": student.employment_status if student else None,
+                "cur_company": student.cur_company if student else None,
+                "cur_city": student.cur_city if student else None,
+                "desire_city": student.desire_city if student else None,
+                "profile_complete": student.profile_complete if student else None,
+                "warning_type": warning.warning_type,
+                "level": warning.level,
+                "ai_suggestion": warning.ai_suggestion,
+                "handled": warning.handled,
+                "handled_at": str(warning.handled_at) if warning.handled_at else None,
+                "created_at": str(warning.created_at)
+            })
 
         return {
-            "list": [{
-                "warning_id": w.warning_id,
-                "account_id": w.account_id,
-                "warning_type": w.warning_type,
-                "level": w.level,
-                "ai_suggestion": w.ai_suggestion,
-                "handled": w.handled,
-                "created_at": str(w.created_at)
-            } for w in warnings],
+            "list": items,
             "total": total,
             "page": page,
             "page_size": page_size
@@ -631,6 +656,12 @@ class SchoolService:
         warning = result.scalar_one_or_none()
         if not warning:
             return False
+
+        warning.handled = handled
+        if handled:
+            warning.handled_at = datetime.now()
+        await self.db.commit()
+        return True
 
     # ========== 省份详情弹窗相关 ==========
 
@@ -963,11 +994,6 @@ class SchoolService:
             "page": page,
             "page_size": page_size,
         }
-
-        warning.handled = handled
-        warning.handled_at = datetime.utcnow()
-        await self.db.commit()
-        return True
 
     async def get_databoard_data(self, university_id: str, year: int | None = None) -> dict:
         """

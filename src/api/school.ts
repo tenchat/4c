@@ -40,6 +40,9 @@ export const exportSchoolStudents = (params: StudentListParams) => {
 export const fetchStudentDetail = (profileId: string) =>
   request.get<any>({ url: `/api/v1/school/students/${profileId}` })
 
+export const fetchStudentProfileById = (profileId: string) =>
+  request.get<any>({ url: `/api/v1/school/students/${profileId}` })
+
 export const importStudents = (formData: FormData) =>
   request.post<any>({ url: '/api/v1/school/students/import', data: formData })
 

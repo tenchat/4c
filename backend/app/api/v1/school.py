@@ -246,9 +246,10 @@ async def get_warnings(
     db: AsyncSession = Depends(get_db),
     service: SchoolService = Depends(get_school_service),
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=100),
     handled: bool = None,
-    level: int = None
+    level: int = None,
+    warning_type: str = None
 ):
     from sqlalchemy import select
     university_id = await get_university_id(db, payload.get("sub"))
@@ -257,7 +258,8 @@ async def get_warnings(
         "page": page,
         "page_size": page_size,
         "handled": handled,
-        "level": level
+        "level": level,
+        "warning_type": warning_type
     }
 
     data = await service.get_warnings(university_id, filters)
@@ -290,25 +292,36 @@ async def generate_warnings(
     db: AsyncSession = Depends(get_db),
     graduation_year: int = Query(None, description="毕业年份筛选，不传则包含所有年份"),
     dry_run: bool = Query(False, description="试运行，不保存只返回结果"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
 ):
     """
     触发预警生成
 
     - **graduation_year**: 可选，按毕业年份筛选
     - **dry_run**: 试运行模式，只计算不保存
+    - **page**: 页码（默认1）
+    - **page_size**: 每页数量（默认20）
     """
     university_id = await get_university_id(db, payload.get("sub"))
 
     from app.services.warning_engine import WarningEngine
     engine = WarningEngine(db)
 
-    result = engine.generate_warnings_for_university(
+    result = await engine.generate_warnings_for_university(
         university_id=university_id,
         graduation_year=graduation_year,
         dry_run=dry_run,
     )
 
-    level_map = {1: "红色预警", 2: "黄色预警", 3: "绿色提醒", 0: "无预警"}
+    # 获取生成预警的列表（分页）
+    from app.services.school_service import SchoolService
+    school_service = SchoolService(db)
+    warnings_result = await school_service.get_warnings(
+        university_id,
+        {"page": page, "page_size": page_size, "handled": False}
+    )
+
     summary = {
         "total_students": result["total"],
         "red_warnings": result["red"],
@@ -326,6 +339,7 @@ async def generate_warnings(
         "data": {
             "summary": summary,
             "dry_run": dry_run,
+            "warnings": warnings_result,
         }
     }
 
