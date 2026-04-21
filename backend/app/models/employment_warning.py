@@ -5,9 +5,9 @@ class EmploymentWarning(Base, TimestampMixin):
     __tablename__ = "employment_warnings"
 
     warning_id = Column(String(36), primary_key=True)
-    account_id = Column(String(36), ForeignKey("accounts.account_id", ondelete="CASCADE"), nullable=False)
+    profile_id = Column(String(36), ForeignKey("student_profiles.profile_id", ondelete="CASCADE"), nullable=False)
     university_id = Column(String(36), ForeignKey("universities.university_id"))
-    warning_type = Column(String(50), nullable=False)  # skill_gap/high_expectation/location_limit/experience_lack
+    warning_type = Column(String(50), nullable=False)  # unemployed_long_term/profile_incomplete/salary_mismatch/no_internship/no_skills
     level = Column(Integer, nullable=False, default=2, index=True)  # 1红 2黄 3绿
     ai_suggestion = Column(Text)  # AI 生成的辅导建议
     handled = Column(Boolean, nullable=False, default=False, index=True)
