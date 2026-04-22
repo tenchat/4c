@@ -471,8 +471,8 @@
           label: '操作',
           width: 120,
           fixed: 'right',
-          formatter: (row: StudentItem) =>
-            h('div', [h(ArtButtonTable, { type: 'view', onClick: () => handleView(row) })])
+          formatter: (row: StudentItem, _col: any, _cell: any, $index: number) =>
+            h('div', [h(ArtButtonTable, { type: 'view', onClick: () => handleViewByIndex($index) })])
         }
       ]
     }
@@ -526,6 +526,23 @@
   }
 
   const handleView = async (row: StudentItem) => {
+    showDetailDialog.value = true
+    detailLoading.value = true
+    studentDetail.value = null
+    try {
+      const res = await fetchStudentDetail(row.profile_id)
+      studentDetail.value = res.data ?? res
+    } catch (e: any) {
+      ElMessage.error(e.message || '获取学生详情失败')
+      showDetailDialog.value = false
+    } finally {
+      detailLoading.value = false
+    }
+  }
+
+  const handleViewByIndex = async (index: number) => {
+    const row = data.value[index] as StudentItem | undefined
+    if (!row) return
     showDetailDialog.value = true
     detailLoading.value = true
     studentDetail.value = null

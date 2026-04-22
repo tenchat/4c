@@ -82,7 +82,6 @@ class AuthService:
                     account_id=account.account_id,
                     university_id=university_id,
                     student_no=student_no,
-                    real_name=real_name or "",
                     college="",
                     major="",
                     degree=1,
